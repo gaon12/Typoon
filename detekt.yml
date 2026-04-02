@@ -1,0 +1,47 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+# 함수 복잡도 — Compose 컴포저블은 길어질 수 있으므로 완화
+complexity:
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+  CyclomaticComplexMethod:
+    threshold: 20
+
+# Compose 람다/trailing lambda 스타일은 허용
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    maxLineLength: 120
+  WildcardImport:
+    active: false
+  UnusedPrivateMember:
+    active: true
+
+# Android 환경에서 허용되는 패턴
+naming:
+  FunctionNaming:
+    # Composable 함수는 PascalCase 허용
+    active: false
+
+# 빈 함수/블록은 Compose에서 흔히 사용 (onDelete = {})
+empty-blocks:
+  EmptyFunctionBlock:
+    active: false
+
+# 성능 규칙
+performance:
+  SpreadOperator:
+    active: false

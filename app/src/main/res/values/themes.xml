@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Typoon" parent="Theme.AppCompat.Light.NoActionBar" />
+
+    <!-- 공유하기 수신용: 투명 배경 + 반투명 창 → BottomSheet만 보임 -->
+    <style name="Theme.Typoon.Share" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+</resources>

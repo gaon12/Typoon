@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="clipboard_convert"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_clipboard_short"
+        android:shortcutLongLabel="@string/shortcut_clipboard_long">
+        <intent
+            android:action="xyz.gaon.typoon.action.CLIPBOARD_CONVERT"
+            android:targetPackage="xyz.gaon.typoon"
+            android:targetClass="xyz.gaon.typoon.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>
