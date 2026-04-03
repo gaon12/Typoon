@@ -127,6 +127,12 @@ private fun appLicenseItem(context: Context): LicenseItem =
     )
 
 private fun openSourceLibrarySpecs(): List<LicenseSpec> =
+    composeLibrarySpecs() +
+        architectureLibrarySpecs() +
+        storageLibrarySpecs() +
+        playServicesLibrarySpecs()
+
+private fun composeLibrarySpecs(): List<LicenseSpec> =
     listOf(
         LicenseSpec(
             name = "AndroidX Core KTX",
@@ -198,6 +204,10 @@ private fun openSourceLibrarySpecs(): List<LicenseSpec> =
             noteResId = R.string.open_source_note_lifecycle_viewmodel_compose,
             licenseAssetPath = "licenses/androidx-lifecycle-viewmodel-compose-LICENSE.txt",
         ),
+    )
+
+private fun architectureLibrarySpecs(): List<LicenseSpec> =
+    listOf(
         LicenseSpec(
             name = "Navigation Compose",
             version = "2.9.0",
@@ -219,6 +229,10 @@ private fun openSourceLibrarySpecs(): List<LicenseSpec> =
             noteResId = R.string.open_source_note_room_ktx,
             licenseAssetPath = "licenses/androidx-room-ktx-LICENSE.txt",
         ),
+    )
+
+private fun storageLibrarySpecs(): List<LicenseSpec> =
+    listOf(
         LicenseSpec(
             name = "DataStore Preferences",
             version = "1.1.4",
@@ -240,6 +254,10 @@ private fun openSourceLibrarySpecs(): List<LicenseSpec> =
             noteResId = R.string.open_source_note_hilt_navigation,
             licenseAssetPath = "licenses/androidx-hilt-navigation-compose-LICENSE.txt",
         ),
+    )
+
+private fun playServicesLibrarySpecs(): List<LicenseSpec> =
+    listOf(
         LicenseSpec(
             name = "Google Play Review",
             version = "2.0.2",

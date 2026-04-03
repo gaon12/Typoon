@@ -112,63 +112,10 @@ fun SettingsHeroCard(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SettingsValuePill(text = chip)
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(164.dp)
-                            .background(
-                                Brush.linearGradient(
-                                    colors =
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f),
-                                            Color.Transparent,
-                                        ),
-                                ),
-                            ),
-                ) {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(start = 28.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                    ) {
-                        Icon(
-                            imageVector = primaryIcon,
-                            contentDescription = null,
-                            modifier = Modifier.padding(22.dp).size(34.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-
-                    secondaryIcon?.let {
-                        Surface(
-                            modifier =
-                                Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .padding(end = 28.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
-                        ) {
-                            Icon(
-                                imageVector = it,
-                                contentDescription = null,
-                                modifier = Modifier.padding(22.dp).size(34.dp),
-                                tint = MaterialTheme.colorScheme.tertiary,
-                            )
-                        }
-                    }
-                }
-            }
+            SettingsHeroIllustration(
+                primaryIcon = primaryIcon,
+                secondaryIcon = secondaryIcon,
+            )
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -184,6 +131,78 @@ fun SettingsHeroCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsHeroIllustration(
+    primaryIcon: ImageVector,
+    secondaryIcon: ImageVector?,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(164.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f),
+                                    Color.Transparent,
+                                ),
+                        ),
+                    ),
+        ) {
+            SettingsHeroIconBubble(
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 28.dp),
+                icon = primaryIcon,
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+
+            secondaryIcon?.let { icon ->
+                SettingsHeroIconBubble(
+                    modifier =
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 28.dp),
+                    icon = icon,
+                    containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
+                    tint = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsHeroIconBubble(
+    modifier: Modifier,
+    icon: ImageVector,
+    containerColor: Color,
+    tint: Color,
+) {
+    Surface(
+        modifier = modifier,
+        shape = CircleShape,
+        color = containerColor,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.padding(22.dp).size(34.dp),
+            tint = tint,
+        )
     }
 }
 

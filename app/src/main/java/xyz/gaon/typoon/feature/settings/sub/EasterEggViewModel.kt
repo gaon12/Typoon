@@ -539,7 +539,8 @@ class EasterEggViewModel
                         "Reaching one hundred floors means more than a single clear. " +
                             "It means you found your rhythm again every time you shook, " +
                             "and rebuilt your center every time you drifted. " +
-                            "For someone who came this far, the next challenge should feel like the next scene, not fear.",
+                            "For someone who came this far, the next challenge should feel " +
+                            "like the next scene, not fear.",
                     ),
                     StoryScript(
                         "clear_02",

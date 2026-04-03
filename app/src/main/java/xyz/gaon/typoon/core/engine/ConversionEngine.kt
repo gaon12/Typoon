@@ -45,8 +45,8 @@ class ConversionEngine {
         feedbackPenalty = (negativeFeedbackRate * 0.3f).coerceIn(0f, 0.3f)
     }
 
-    companion object {
-        private val ENG_TO_KOR_MAP =
+    private object KeyboardMappings {
+        val ENG_TO_KOR_MAP =
             mapOf(
                 'q' to "ㅂ",
                 'w' to "ㅈ",
@@ -83,10 +83,12 @@ class ConversionEngine {
                 'P' to "ㅖ",
             )
 
-        private val KOR_TO_ENG_MAP = ENG_TO_KOR_MAP.entries.associate { it.value[0] to it.key.toString() }
+        val KOR_TO_ENG_MAP = ENG_TO_KOR_MAP.entries.associate { it.value[0] to it.key.toString() }
+    }
 
+    private object HangulTables {
         // 초성 (19개)
-        private val CHOSUNG =
+        val CHOSUNG =
             listOf(
                 "ㄱ",
                 "ㄲ",
@@ -110,7 +112,7 @@ class ConversionEngine {
             )
 
         // 중성 (21개)
-        private val JUNGSUNG =
+        val JUNGSUNG =
             listOf(
                 "ㅏ",
                 "ㅐ",
@@ -136,7 +138,7 @@ class ConversionEngine {
             )
 
         // 종성 (28개, 0번은 없음)
-        private val JONGSUNG =
+        val JONGSUNG =
             listOf(
                 "",
                 "ㄱ",
@@ -169,7 +171,7 @@ class ConversionEngine {
             )
 
         // 복합 모음 조합
-        private val COMPLEX_VOWELS =
+        val COMPLEX_VOWELS =
             mapOf(
                 "ㅗㅏ" to "ㅘ",
                 "ㅗㅐ" to "ㅙ",
@@ -181,7 +183,7 @@ class ConversionEngine {
             )
 
         // 복합 자음 조합 (종성용)
-        private val COMPLEX_CONSONANTS =
+        val COMPLEX_CONSONANTS =
             mapOf(
                 "ㄱㅅ" to "ㄳ",
                 "ㄴㅈ" to "ㄵ",
@@ -195,8 +197,10 @@ class ConversionEngine {
                 "ㄹㅎ" to "ㅀ",
                 "ㅂㅅ" to "ㅄ",
             )
+    }
 
-        private val COMMON_KOR_WORDS =
+    private object KoreanLanguageHints {
+        val COMMON_KOR_WORDS =
             setOf(
                 "안녕",
                 "안녕하세요",
@@ -440,8 +444,10 @@ class ConversionEngine {
                 "서버",
                 "이어서",
             )
+    }
 
-        private val COMMON_ENG_WORDS =
+    private object EnglishLanguageHints {
+        val COMMON_ENG_WORDS =
             setOf(
                 "the",
                 "be",
@@ -713,8 +719,10 @@ class ConversionEngine {
                 "version",
                 "report",
             )
+    }
 
-        private val COMMON_ENG_PATTERNS =
+    private object EnglishPatterns {
+        val COMMON_ENG_PATTERNS =
             setOf(
                 "th",
                 "he",
@@ -773,8 +781,10 @@ class ConversionEngine {
                 "save",
                 "copy",
             )
+    }
 
-        private val COMMON_KOR_ENDINGS =
+    private object KoreanGrammarHints {
+        val COMMON_KOR_ENDINGS =
             setOf(
                 '은',
                 '는',
@@ -808,7 +818,12 @@ class ConversionEngine {
 
         val words = result.resultText.split(Regex("\\s+")).filter { it.length >= 2 }
         if (words.isNotEmpty()) {
-            val commonSet = if (direction == ConversionDirection.ENG_TO_KOR) COMMON_KOR_WORDS else COMMON_ENG_WORDS
+            val commonSet =
+                if (direction == ConversionDirection.ENG_TO_KOR) {
+                    KoreanLanguageHints.COMMON_KOR_WORDS
+                } else {
+                    EnglishLanguageHints.COMMON_ENG_WORDS
+                }
             val matchCount = words.count { it in commonSet }
             if (matchCount.toFloat() / words.size >= 0.5f) {
                 return result.copy(confidence = (result.confidence + 0.1f).coerceAtMost(1.0f))
@@ -1020,7 +1035,7 @@ class ConversionEngine {
         val englishLetterCount = segment.count { it.isEnglishLetter() }
         if (englishLetterCount == 0) return true
         if (looksLikeUrlOrEmail(segment)) return true
-        if (lower in COMMON_ENG_WORDS) return true
+        if (lower in EnglishLanguageHints.COMMON_ENG_WORDS) return true
         if (lower in setOf("a", "i")) return true
         if (segment.length <= 2 && segment.any { it.isUpperCase() }) return true
         if (segment.length <= 4 && segment.all { it.isUpperCase() }) return true
@@ -1028,7 +1043,7 @@ class ConversionEngine {
     }
 
     private fun shouldPreserveKoreanSegment(segment: String): Boolean {
-        if (segment in COMMON_KOR_WORDS) return true
+        if (segment in KoreanLanguageHints.COMMON_KOR_WORDS) return true
 
         val syllableCount = segment.count { it.code in 0xAC00..0xD7A3 }
         val jamoCount = segment.count { it.code in 0x3131..0x318E }
@@ -1040,7 +1055,7 @@ class ConversionEngine {
         if (token.isEmpty()) return 0f
 
         val lower = token.lowercase()
-        if (lower in COMMON_ENG_WORDS) return 1.0f
+        if (lower in EnglishLanguageHints.COMMON_ENG_WORDS) return 1.0f
         if (looksLikeUrlOrEmail(token)) return 1.0f
 
         val englishLetterCount = token.count { it.isEnglishLetter() }
@@ -1062,7 +1077,7 @@ class ConversionEngine {
 
     private fun koreanTokenScore(token: String): Float {
         if (token.isEmpty()) return 0f
-        if (token in COMMON_KOR_WORDS) return 1.0f
+        if (token in KoreanLanguageHints.COMMON_KOR_WORDS) return 1.0f
 
         val syllableCount = token.count { it.code in 0xAC00..0xD7A3 }
         val jamoCount = token.count { it.code in 0x3131..0x318E }
@@ -1073,14 +1088,14 @@ class ConversionEngine {
         if (syllableCount > 0) score += 0.3f
         if (token.length in 2..12) score += 0.15f
         if (jamoCount > 0 && syllableCount == 0) score += 0.05f
-        if (token.lastOrNull() in COMMON_KOR_ENDINGS) score += 0.08f
+        if (token.lastOrNull() in KoreanGrammarHints.COMMON_KOR_ENDINGS) score += 0.08f
         return score.coerceAtMost(0.95f)
     }
 
     private fun englishPatternScore(lower: String): Float {
         if (lower.length < 2) return 0f
 
-        val hits = COMMON_ENG_PATTERNS.count { pattern -> lower.contains(pattern) }
+        val hits = EnglishPatterns.COMMON_ENG_PATTERNS.count { pattern -> lower.contains(pattern) }
         return (hits * 0.06f).coerceAtMost(0.24f)
     }
 
@@ -1144,11 +1159,11 @@ class ConversionEngine {
 
         for (char in input) {
             // Check explicit mapping first (for Q, W, E, R, T, O, P)
-            var mapped = ENG_TO_KOR_MAP[char]
+            var mapped = KeyboardMappings.ENG_TO_KOR_MAP[char]
 
             // If not found and it's uppercase, try lowercase
             if (mapped == null && char.isUpperCase()) {
-                mapped = ENG_TO_KOR_MAP[char.lowercaseChar()]
+                mapped = KeyboardMappings.ENG_TO_KOR_MAP[char.lowercaseChar()]
             }
 
             if (mapped != null) {
@@ -1180,10 +1195,10 @@ class ConversionEngine {
                 val jungsungIdx = (base % (21 * 28)) / 28
                 val jongsungIdx = base % 28
 
-                sb.append(mapJamoToEng(CHOSUNG[chosungIdx]))
-                sb.append(mapJamoToEng(JUNGSUNG[jungsungIdx]))
+                sb.append(mapJamoToEng(HangulTables.CHOSUNG[chosungIdx]))
+                sb.append(mapJamoToEng(HangulTables.JUNGSUNG[jungsungIdx]))
                 if (jongsungIdx > 0) {
-                    sb.append(mapJamoToEng(JONGSUNG[jongsungIdx]))
+                    sb.append(mapJamoToEng(HangulTables.JONGSUNG[jongsungIdx]))
                 }
             } else if (code in 0x3131..0x318E) { // 자음/모음
                 sb.append(mapJamoToEng(char.toString()))
@@ -1199,17 +1214,17 @@ class ConversionEngine {
         val decomposed = decomposeJamo(jamo)
         val result = StringBuilder()
         for (j in decomposed) {
-            result.append(KOR_TO_ENG_MAP[j] ?: j)
+            result.append(KeyboardMappings.KOR_TO_ENG_MAP[j] ?: j)
         }
         return result.toString()
     }
 
     private fun decomposeJamo(jamo: String): List<Char> {
         // 복합 모음/자음 분해 (예: ㅘ -> ㅗ, ㅏ / ㄳ -> ㄱ, ㅅ)
-        for ((complex, simple) in COMPLEX_VOWELS) {
+        for ((complex, simple) in HangulTables.COMPLEX_VOWELS) {
             if (jamo == simple) return complex.toList()
         }
-        for ((complex, simple) in COMPLEX_CONSONANTS) {
+        for ((complex, simple) in HangulTables.COMPLEX_CONSONANTS) {
             if (jamo == simple) return complex.toList()
         }
         return listOf(jamo[0])
@@ -1223,7 +1238,7 @@ class ConversionEngine {
         while (i < jamos.size) {
             // 한 글자 단위 조합 시도
             // 초성 확인
-            val cIdx = CHOSUNG.indexOf(jamos[i])
+            val cIdx = HangulTables.CHOSUNG.indexOf(jamos[i])
             if (cIdx == -1) {
                 // 초성이 아니면 (모음부터 시작하거나 등) 그냥 추가
                 result.append(jamos[i])
@@ -1238,14 +1253,14 @@ class ConversionEngine {
                 continue
             }
 
-            var vIdx = JUNGSUNG.indexOf(jamos[i + 1])
+            var vIdx = HangulTables.JUNGSUNG.indexOf(jamos[i + 1])
             var vSize = 1
 
             // 복합 모음 확인 (예: ㅗ + ㅏ = ㅘ)
             if (i + 2 < jamos.size) {
-                val combinedV = COMPLEX_VOWELS[jamos[i + 1] + jamos[i + 2]]
+                val combinedV = HangulTables.COMPLEX_VOWELS[jamos[i + 1] + jamos[i + 2]]
                 if (combinedV != null) {
-                    val nextVIdx = JUNGSUNG.indexOf(combinedV)
+                    val nextVIdx = HangulTables.JUNGSUNG.indexOf(combinedV)
                     if (nextVIdx != -1) {
                         vIdx = nextVIdx
                         vSize = 2
@@ -1266,9 +1281,14 @@ class ConversionEngine {
             if (i + vSize + 1 < jamos.size) {
                 // 다음 글자가 자음이고, 그 다음이 모음이 아니면 종성 후보
                 val nextChar = jamos[i + vSize + 1]
-                val isNextNextVowel = if (i + vSize + 2 < jamos.size) JUNGSUNG.contains(jamos[i + vSize + 2]) else false
+                val isNextNextVowel =
+                    if (i + vSize + 2 < jamos.size) {
+                        HangulTables.JUNGSUNG.contains(jamos[i + vSize + 2])
+                    } else {
+                        false
+                    }
 
-                if (CHOSUNG.contains(nextChar) && !isNextNextVowel) {
+                if (HangulTables.CHOSUNG.contains(nextChar) && !isNextNextVowel) {
                     // 종성일 가능성 높음
                     // 복합 자음 종성 확인 (예: ㄱ + ㅅ = ㄳ)
                     if (i + vSize + 2 < jamos.size) {
@@ -1277,20 +1297,20 @@ class ConversionEngine {
                             if (i + vSize + 3 <
                                 jamos.size
                             ) {
-                                JUNGSUNG.contains(jamos[i + vSize + 3])
+                                HangulTables.JUNGSUNG.contains(jamos[i + vSize + 3])
                             } else {
                                 false
                             }
 
-                        val combinedC = COMPLEX_CONSONANTS[nextChar + nextNextChar]
+                        val combinedC = HangulTables.COMPLEX_CONSONANTS[nextChar + nextNextChar]
                         if (combinedC != null && !isNextNextNextVowel) {
-                            tIdx = JONGSUNG.indexOf(combinedC)
+                            tIdx = HangulTables.JONGSUNG.indexOf(combinedC)
                             tSize = 2
                         }
                     }
 
                     if (tIdx <= 0) {
-                        tIdx = JONGSUNG.indexOf(nextChar)
+                        tIdx = HangulTables.JONGSUNG.indexOf(nextChar)
                         if (tIdx != -1) {
                             tSize = 1
                         } else {

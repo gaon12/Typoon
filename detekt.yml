@@ -1,6 +1,3 @@
-build:
-  maxIssues: 0
-
 config:
   validation: true
   warningsAsErrors: false
@@ -8,16 +5,16 @@ config:
 # 함수 복잡도 — Compose 컴포저블은 길어질 수 있으므로 완화
 complexity:
   LongMethod:
-    threshold: 80
+    allowedLines: 80
   LongParameterList:
-    functionThreshold: 8
-    constructorThreshold: 8
+    allowedFunctionParameters: 8
+    allowedConstructorParameters: 8
     ignoreDefaultParameters: true
   TooManyFunctions:
-    thresholdInFiles: 20
-    thresholdInClasses: 20
+    allowedFunctionsPerFile: 20
+    allowedFunctionsPerClass: 20
   CyclomaticComplexMethod:
-    threshold: 20
+    allowedComplexity: 20
 
 # Compose 람다/trailing lambda 스타일은 허용
 style:
@@ -27,7 +24,7 @@ style:
     maxLineLength: 120
   WildcardImport:
     active: false
-  UnusedPrivateMember:
+  UnusedPrivateProperty:
     active: true
 
 # Android 환경에서 허용되는 패턴
