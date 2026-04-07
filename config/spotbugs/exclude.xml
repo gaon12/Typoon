@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Dagger/Hilt generated wrappers frequently trigger false positives -->
+    <Match>
+        <Class name="~.*_Factory$"/>
+    </Match>
+    <Match>
+        <Class name="~.*_MembersInjector$"/>
+    </Match>
+    <Match>
+        <Class name="~.*_HiltModules_.*"/>
+    </Match>
+    <Match>
+        <Class name="~.*_LazyMapKey$"/>
+    </Match>
+    <Match>
+        <Class name="~Hilt_.*"/>
+    </Match>
+    <Match>
+        <Class name="~Dagger.*"/>
+    </Match>
+</FindBugsFilter>

@@ -9,7 +9,12 @@ object DatabaseMigrations {
         object : Migration(1, 2) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `exceptions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `word` TEXT NOT NULL)",
+                    """
+                    CREATE TABLE IF NOT EXISTS `exceptions` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `word` TEXT NOT NULL
+                    )
+                    """.trimIndent(),
                 )
             }
         }
@@ -39,10 +44,21 @@ object DatabaseMigrations {
         object : Migration(4, 5) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
-                    "CREATE VIRTUAL TABLE IF NOT EXISTS `conversions_fts` USING FTS4(`sourceText` TEXT NOT NULL, `resultText` TEXT NOT NULL, content=`conversions`)",
+                    """
+                    CREATE VIRTUAL TABLE IF NOT EXISTS `conversions_fts`
+                    USING FTS4(
+                        `sourceText` TEXT NOT NULL,
+                        `resultText` TEXT NOT NULL,
+                        content=`conversions`
+                    )
+                    """.trimIndent(),
                 )
                 connection.execSQL(
-                    "INSERT INTO `conversions_fts`(`docid`, `sourceText`, `resultText`) SELECT `rowid`, `sourceText`, `resultText` FROM `conversions`",
+                    """
+                    INSERT INTO `conversions_fts`(`docid`, `sourceText`, `resultText`)
+                    SELECT `rowid`, `sourceText`, `resultText`
+                    FROM `conversions`
+                    """.trimIndent(),
                 )
             }
         }
@@ -51,7 +67,12 @@ object DatabaseMigrations {
         object : Migration(5, 6) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `exceptions_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `word` TEXT NOT NULL)",
+                    """
+                    CREATE TABLE IF NOT EXISTS `exceptions_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `word` TEXT NOT NULL
+                    )
+                    """.trimIndent(),
                 )
                 connection.execSQL(
                     "INSERT INTO `exceptions_new`(`word`) SELECT `word` FROM `exceptions` GROUP BY `word`",
