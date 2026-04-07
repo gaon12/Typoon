@@ -47,11 +47,29 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_5_6: Migration =
+        object : Migration(5, 6) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `exceptions_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `word` TEXT NOT NULL)",
+                )
+                connection.execSQL(
+                    "INSERT INTO `exceptions_new`(`word`) SELECT `word` FROM `exceptions` GROUP BY `word`",
+                )
+                connection.execSQL("DROP TABLE `exceptions`")
+                connection.execSQL("ALTER TABLE `exceptions_new` RENAME TO `exceptions`")
+                connection.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_exceptions_word` ON `exceptions` (`word`)",
+                )
+            }
+        }
+
     val ALL: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
+            MIGRATION_5_6,
         )
 }

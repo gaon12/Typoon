@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ConversionEntity::class, ExceptionEntity::class, ConversionFts::class],
-    version = 5,
+    version = 6,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun conversionDao(): ConversionDao
