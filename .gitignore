@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Android build/release outputs
+app/release/
+*.apk
+*.aab
+**/baselineProfiles/
