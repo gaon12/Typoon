@@ -227,6 +227,15 @@
     <string name="process_text_replace">Replace selected text</string>
 
     <string name="settings_section_project">Project</string>
+    <string name="settings_release_notes_title">Release notes</string>
+    <string name="settings_release_notes_summary">See what changed in the latest release.</string>
+    <string name="settings_release_notes_dialog_title">Release notes (%1$s)</string>
+    <string name="settings_release_notes_update_dialog_title">Update available (%1$s)</string>
+    <string name="settings_release_notes_update_dialog_body">A newer version is available. Update is recommended for the best stability and fixes.</string>
+    <string name="settings_release_notes_update_action">Update</string>
+    <string name="settings_release_notes_open_github">Open on GitHub</string>
+    <string name="settings_release_notes_empty">No release notes were found for this version.</string>
+    <string name="settings_release_notes_load_failed">Could not load release notes right now.</string>
     <string name="settings_github_title">GitHub</string>
     <string name="settings_github_summary">View source code, report issues, or contribute.</string>
     <string name="settings_donate_title">Donate</string>

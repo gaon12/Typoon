@@ -227,6 +227,15 @@
     <string name="process_text_replace">선택 텍스트 바꾸기</string>
 
     <string name="settings_section_project">프로젝트</string>
+    <string name="settings_release_notes_title">릴리즈 노트</string>
+    <string name="settings_release_notes_summary">최신 버전에서 바뀐 내용을 확인합니다.</string>
+    <string name="settings_release_notes_dialog_title">릴리즈 노트 (%1$s)</string>
+    <string name="settings_release_notes_update_dialog_title">업데이트 가능 (%1$s)</string>
+    <string name="settings_release_notes_update_dialog_body">새 버전이 있습니다. 안정성과 버그 수정 반영을 위해 업데이트를 권장합니다.</string>
+    <string name="settings_release_notes_update_action">업데이트</string>
+    <string name="settings_release_notes_open_github">GitHub에서 열기</string>
+    <string name="settings_release_notes_empty">이 버전의 릴리즈 노트가 없습니다.</string>
+    <string name="settings_release_notes_load_failed">릴리즈 노트를 불러오지 못했습니다.</string>
     <string name="settings_github_title">GitHub</string>
     <string name="settings_github_summary">소스 코드를 확인하거나 피드백을 남길 수 있습니다.</string>
     <string name="settings_donate_title">후원</string>

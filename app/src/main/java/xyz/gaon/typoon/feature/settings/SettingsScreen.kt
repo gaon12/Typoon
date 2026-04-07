@@ -2,6 +2,7 @@
 
 package xyz.gaon.typoon.feature.settings
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -60,6 +63,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val exportState by viewModel.exportState.collectAsState()
+    val releaseNotesDialogState by viewModel.releaseNotesDialogState.collectAsState()
     val context = LocalContext.current
     val exportSuccessMessage = stringResource(R.string.settings_export_success)
     val exportErrorMessage =
@@ -79,6 +83,16 @@ fun SettingsScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.resetEvent.collect { onResetApp() }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.ensureUpdateChecked()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.messageEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
     }
 
     val exportLauncher =
@@ -129,6 +143,13 @@ fun SettingsScreen(
                 showResetConfirm2 = false
                 viewModel.onResetApp()
             },
+        )
+    }
+
+    releaseNotesDialogState?.let { dialogState ->
+        ReleaseNotesDialog(
+            state = dialogState,
+            onDismiss = viewModel::onDismissReleaseNotesDialog,
         )
     }
 
@@ -277,6 +298,12 @@ fun SettingsScreen(
                 SettingsSectionTitle(stringResource(R.string.settings_section_project))
                 SettingsPanel {
                     SettingsNavigationRow(
+                        title = stringResource(R.string.settings_release_notes_title),
+                        description = stringResource(R.string.settings_release_notes_summary),
+                        onClick = viewModel::onViewReleaseNotes,
+                    )
+                    SettingsRowDivider()
+                    SettingsNavigationRow(
                         title = stringResource(R.string.settings_github_title),
                         description = stringResource(R.string.settings_github_summary),
                         onClick = {
@@ -301,6 +328,89 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
+}
+
+@Composable
+private fun ReleaseNotesDialog(
+    state: ReleaseNotesDialogState,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val packageName = BuildConfig.APPLICATION_ID
+    val marketUri = "market://details?id=$packageName".toUri()
+    val webUri = "https://play.google.com/store/apps/details?id=$packageName".toUri()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text =
+                    if (state.updateRecommended) {
+                        stringResource(R.string.settings_release_notes_update_dialog_title, state.versionName)
+                    } else {
+                        stringResource(R.string.settings_release_notes_dialog_title, state.versionName)
+                    },
+            )
+        },
+        text = {
+            Column(
+                modifier =
+                    Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (state.updateRecommended) {
+                    Text(
+                        text = stringResource(R.string.settings_release_notes_update_dialog_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Text(
+                    text = state.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        },
+        confirmButton = {
+            if (state.updateRecommended) {
+                Button(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, marketUri))
+                        } catch (_: ActivityNotFoundException) {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
+                        } catch (_: Exception) {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
+                        }
+                        onDismiss()
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_release_notes_update_action))
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.common_close))
+                }
+            }
+        },
+        dismissButton = {
+            if (state.updateRecommended) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            } else {
+                TextButton(
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, state.htmlUrl.toUri()))
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_release_notes_open_github))
+                }
+            }
+        },
+    )
 }
 
 @Composable

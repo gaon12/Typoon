@@ -181,6 +181,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.play.review)
     implementation(libs.play.review.ktx)
+    implementation(libs.play.app.update)
     implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
