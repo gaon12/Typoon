@@ -14,6 +14,7 @@ import xyz.gaon.typoon.core.clipboard.ClipboardHelper
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
 import xyz.gaon.typoon.core.data.db.AppDatabase
 import xyz.gaon.typoon.core.data.db.ConversionDao
+import xyz.gaon.typoon.core.data.db.DatabaseMigrations
 import xyz.gaon.typoon.core.data.db.ExceptionDao
 import xyz.gaon.typoon.core.data.repository.ExceptionRepository
 import xyz.gaon.typoon.core.data.repository.ExceptionRepositoryImpl
@@ -41,7 +42,7 @@ object AppModule {
                 context,
                 AppDatabase::class.java,
                 "typoon_db",
-            ).fallbackToDestructiveMigration(dropAllTables = true)
+            ).addMigrations(*DatabaseMigrations.ALL)
             .build()
 
     @Provides
