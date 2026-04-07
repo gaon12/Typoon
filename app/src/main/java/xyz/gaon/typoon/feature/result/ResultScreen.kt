@@ -232,6 +232,7 @@ fun ResultScreen(
 
             val confidence = result?.confidence ?: 1f
             if (confidence < settings.confidenceWarningThreshold) {
+                val confidencePct = (confidence * 100).toInt()
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     colors =
@@ -240,20 +241,37 @@ fun ResultScreen(
                         ),
                     shape = RoundedCornerShape(10.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(18.dp),
-                        )
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Text(
+                                    text = "  ${stringResource(R.string.result_warning)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.result_confidence_pct, confidencePct),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f),
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "  ${stringResource(R.string.result_warning)}",
+                            text = stringResource(R.string.result_warning_action),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
                         )
                     }
                 }

@@ -13,6 +13,20 @@ interface ConversionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: ConversionEntity): Long
 
+    @Transaction
+    suspend fun insertAndTrim(
+        entity: ConversionEntity,
+        maxHistoryCount: Int,
+    ): Long {
+        val id = insert(entity)
+        val currentCount = count()
+        val deleteCount = currentCount - maxHistoryCount
+        if (deleteCount > 0) {
+            deleteOldest(deleteCount)
+        }
+        return id
+    }
+
     @Query("DELETE FROM conversions WHERE id = :id")
     suspend fun deleteById(id: Long)
 

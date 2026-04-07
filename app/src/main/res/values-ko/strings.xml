@@ -32,6 +32,9 @@
     <string name="shortcut_clipboard_short">클립보드 변환</string>
     <string name="shortcut_clipboard_long">클립보드 내용 바로 변환</string>
     <string name="qs_tile_label">클립보드 변환</string>
+    <string name="qs_tile_subtitle">탭하면 클립보드 텍스트를 변환합니다</string>
+    <string name="qs_tile_content_description">클립보드 변환기 — 탭하면 Typoon에서 클립보드 텍스트를 변환합니다</string>
+    <string name="qs_tile_state_active">클립보드 텍스트 변환 준비됨</string>
     <string name="share_chooser_title">공유하기</string>
 
     <string name="common_back">뒤로</string>
@@ -216,7 +219,10 @@
     <string name="result_collapse">접기</string>
     <string name="result_done">완료!</string>
     <string name="result_warning">결과가 정확하지 않을 수 있습니다</string>
+    <string name="result_confidence_pct">신뢰도: %1$d%%</string>
+    <string name="result_warning_action">원문을 확인하거나 결과를 직접 수정해 보세요.</string>
     <string name="result_share_credit">— Typoon으로 변환됨</string>
+    <string name="conversion_processing">텍스트를 변환하는 중…</string>
 
     <string name="bottom_sheet_direction_eng_to_kor">영문에서 한글로 복구</string>
     <string name="bottom_sheet_direction_kor_to_eng">한글에서 영문으로 복구</string>

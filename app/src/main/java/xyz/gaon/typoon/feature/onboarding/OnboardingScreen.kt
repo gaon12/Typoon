@@ -142,7 +142,7 @@ fun OnboardingScreen(
                 Column(
                     modifier =
                         Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
                             .verticalScroll(pageScrollState)
                             .padding(top = 8.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),

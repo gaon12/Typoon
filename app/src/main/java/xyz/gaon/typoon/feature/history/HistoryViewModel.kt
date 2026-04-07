@@ -115,7 +115,7 @@ class HistoryViewModel
             pendingHolder.result =
                 ConversionResult(
                     resultText = entity.resultText,
-                    direction = ConversionDirection.valueOf(entity.direction),
+                    direction = ConversionDirection.fromPersisted(entity.direction),
                     confidence = entity.confidence,
                 )
             pendingHolder.isFromShare = false

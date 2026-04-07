@@ -27,6 +27,7 @@ import xyz.gaon.typoon.core.data.repository.HistoryRepository
 import xyz.gaon.typoon.core.di.AppSessionState
 import xyz.gaon.typoon.core.di.PendingConversionHolder
 import xyz.gaon.typoon.core.engine.ConversionEngine
+import xyz.gaon.typoon.core.engine.ConversionDirection
 import xyz.gaon.typoon.core.engine.ConversionResult
 import xyz.gaon.typoon.core.text.TextPayloadSanitizer
 import javax.inject.Inject
@@ -253,9 +254,7 @@ class HomeViewModel
             pendingHolder.result =
                 ConversionResult(
                     resultText = entity.resultText,
-                    direction =
-                        xyz.gaon.typoon.core.engine.ConversionDirection
-                            .valueOf(entity.direction),
+                    direction = ConversionDirection.fromPersisted(entity.direction),
                     confidence = entity.confidence,
                 )
             pendingHolder.isFromShare = false

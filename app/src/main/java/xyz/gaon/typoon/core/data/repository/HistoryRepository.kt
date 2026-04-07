@@ -77,16 +77,8 @@ class HistoryRepositoryImpl(
         }
 
     override suspend fun insert(entity: ConversionEntity): Long {
-        val id = dao.insert(entity)
-
-        // Max history count logic
         val settings = preferences.settings.first()
-        val currentCount = dao.count()
-        if (currentCount > settings.maxHistoryCount) {
-            val toDelete = currentCount - settings.maxHistoryCount
-            dao.deleteOldest(toDelete)
-        }
-        return id
+        return dao.insertAndTrim(entity = entity, maxHistoryCount = settings.maxHistoryCount)
     }
 
     override suspend fun getAllForExport(): List<ConversionEntity> = dao.getAllSortedByDate()

@@ -2,6 +2,7 @@ package xyz.gaon.typoon.core.tile
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
@@ -21,7 +22,16 @@ class ClipboardConvertTileService : TileService() {
     private fun updateTile() {
         qsTile?.apply {
             label = getString(R.string.qs_tile_label)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                subtitle = getString(R.string.qs_tile_subtitle)
+            }
             state = Tile.STATE_ACTIVE
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentDescription = getString(R.string.qs_tile_content_description)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                stateDescription = getString(R.string.qs_tile_state_active)
+            }
             updateTile()
         }
     }

@@ -129,4 +129,65 @@ class ConversionEngineTest {
 
         assertEquals(expected, result.resultText)
     }
+
+    @Test
+    fun `ENG_TO_KOR - Complex vowels`() {
+        val inputs = mapOf(
+            "ghk" to "화",
+            "rhk" to "과",
+            "dnj" to "워",
+            "dml" to "의"
+        )
+        inputs.forEach { (input, expected) ->
+            val result = engine.convertForced(input, ConversionDirection.ENG_TO_KOR)
+            assertEquals("Failed for $input", expected, result.resultText)
+        }
+    }
+
+    @Test
+    fun `ENG_TO_KOR - Complex consonants in syllables`() {
+        val inputs = mapOf(
+            "rkqt" to "값",
+            "dksw" to "앉",
+            "aksg" to "많",
+            "ekfr" to "닭"
+        )
+        inputs.forEach { (input, expected) ->
+            val result = engine.convertForced(input, ConversionDirection.ENG_TO_KOR)
+            assertEquals("Failed for $input", expected, result.resultText)
+        }
+    }
+
+    @Test
+    fun `Mixed script tokens attached without spaces`() {
+        // "dkssud안녕하세요" -> "안녕안녕하세요" (if dkssud is converted)
+        // In mixed mode, it splits into ["dkssud", "안녕하세요"]
+        // "dkssud" score will be low for English, high for Korean when converted.
+        val input = "dkssud안녕하세요"
+        val expected = "안녕안녕하세요"
+        val result = engine.convert(input)
+        assertEquals(expected, result.resultText)
+    }
+
+    @Test
+    fun `English words attached to Korean typo`() {
+        val input = "helloㅔㄱㅐㅓㄷㅊㅅ"
+        val expected = "helloproject"
+        val result = engine.convert(input)
+        assertEquals(expected, result.resultText)
+    }
+
+    @Test
+    fun `Complex jamo in syllables`() {
+        val input = "rhksflwk" // 관리자
+        val expected = "관리자"
+        val result = engine.convertForced(input, ConversionDirection.ENG_TO_KOR)
+        assertEquals(expected, result.resultText)
+    }
+
+    @Test
+    fun `Complex jamo with trailing vowels`() {
+        val input = "rksms"
+        assertEquals("가는", engine.convertForced(input, ConversionDirection.ENG_TO_KOR).resultText)
+    }
 }

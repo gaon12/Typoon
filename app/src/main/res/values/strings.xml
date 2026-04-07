@@ -32,6 +32,9 @@
     <string name="shortcut_clipboard_short">Clipboard convert</string>
     <string name="shortcut_clipboard_long">Convert clipboard text right away</string>
     <string name="qs_tile_label">Clipboard convert</string>
+    <string name="qs_tile_subtitle">Tap to convert clipboard text</string>
+    <string name="qs_tile_content_description">Clipboard converter — tap to convert clipboard text in Typoon</string>
+    <string name="qs_tile_state_active">Ready to convert clipboard text</string>
     <string name="share_chooser_title">Share via</string>
 
     <string name="common_back">Back</string>
@@ -216,7 +219,10 @@
     <string name="result_collapse">Collapse</string>
     <string name="result_done">Done!</string>
     <string name="result_warning">This result may be inaccurate.</string>
+    <string name="result_confidence_pct">Confidence: %1$d%%</string>
+    <string name="result_warning_action">Check the source text or edit the result manually.</string>
     <string name="result_share_credit">— Converted with Typoon</string>
+    <string name="conversion_processing">Converting text…</string>
 
     <string name="bottom_sheet_direction_eng_to_kor">Recovered from English to Korean</string>
     <string name="bottom_sheet_direction_kor_to_eng">Recovered from Korean to English</string>
