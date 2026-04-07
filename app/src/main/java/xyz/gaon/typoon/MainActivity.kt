@@ -3,19 +3,20 @@ package xyz.gaon.typoon
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import dagger.hilt.android.AndroidEntryPoint
 import xyz.gaon.typoon.core.data.datastore.ThemeMode
 import xyz.gaon.typoon.navigation.AppNavigation
@@ -32,21 +33,11 @@ class MainActivity : AppCompatActivity() {
             splashScreen.setOnExitAnimationListener { it.remove() }
         }
         handleIntentAction()
-        enableEdgeToEdge(
-            statusBarStyle =
-                SystemBarStyle.auto(
-                    android.graphics.Color.TRANSPARENT,
-                    android.graphics.Color.TRANSPARENT,
-                ),
-            navigationBarStyle =
-                SystemBarStyle.auto(
-                    android.graphics.Color.TRANSPARENT,
-                    android.graphics.Color.TRANSPARENT,
-                ),
-        )
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val shortcutClipboardToken by autoClipboardRequestToken
             val settings by viewModel.settings.collectAsState()
+            val view = LocalView.current
 
             val isDarkTheme =
                 when (settings.themeMode) {
@@ -54,6 +45,15 @@ class MainActivity : AppCompatActivity() {
                     ThemeMode.LIGHT -> false
                     ThemeMode.DARK -> true
                 }
+
+            SideEffect {
+                WindowCompat
+                    .getInsetsController(window, view)
+                    .apply {
+                        isAppearanceLightStatusBars = !isDarkTheme
+                        isAppearanceLightNavigationBars = !isDarkTheme
+                    }
+            }
 
             TypoonTheme(darkTheme = isDarkTheme) {
                 Surface(
