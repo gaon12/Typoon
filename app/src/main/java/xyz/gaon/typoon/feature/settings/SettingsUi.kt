@@ -23,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -48,11 +50,17 @@ import xyz.gaon.typoon.ui.components.AdaptiveContentContainer
 fun SettingsPageScaffold(
     title: String,
     onNavigateBack: (() -> Unit)?,
+    snackbarHostState: SnackbarHostState? = null,
     content: @Composable (Modifier) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = {
+            snackbarHostState?.let { hostState ->
+                SnackbarHost(hostState = hostState)
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {

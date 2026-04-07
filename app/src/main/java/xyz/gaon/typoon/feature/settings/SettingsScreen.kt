@@ -135,6 +135,7 @@ fun SettingsScreen(
     SettingsPageScaffold(
         title = stringResource(R.string.settings_title),
         onNavigateBack = null,
+        snackbarHostState = snackbarHostState,
     ) { modifier ->
         Column(
             modifier =
