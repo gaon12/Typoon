@@ -5,6 +5,7 @@ package xyz.gaon.typoon.core.data.repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
 import xyz.gaon.typoon.core.data.db.ConversionDao
 import xyz.gaon.typoon.core.data.db.ConversionEntity
@@ -46,15 +47,34 @@ class HistoryRepositoryImpl(
     override fun getRecentHistory(limit: Int): Flow<List<ConversionEntity>> = dao.getRecent(limit)
 
     override fun searchHistory(query: String): Flow<List<ConversionEntity>> {
-        val sanitized =
-            query
-                .trim()
-                .filter { it.isLetterOrDigit() || it.isWhitespace() }
+        val normalized = HistorySearchPolicy.normalizeUserQuery(query)
+        if (normalized.isBlank()) return dao.getRecent(50)
 
-        return if (sanitized.isNotBlank()) {
-            dao.search("$sanitized*")
-        } else {
-            dao.getRecent(50)
+        if (HistorySearchPolicy.isChoseongOnlyQuery(normalized)) {
+            return dao
+                .getRecent(500)
+                .map { entities ->
+                    entities
+                        .filter { entity ->
+                            HistorySearchPolicy.matchesChoseong(
+                                query = normalized,
+                                sourceText = entity.sourceText,
+                                resultText = entity.resultText,
+                            )
+                        }.take(50)
+                }
+        }
+
+        val escapedLikeQuery = HistorySearchPolicy.escapeLikeQuery(normalized)
+        val likeFlow = dao.searchLike(escapedLikeQuery)
+        val ftsQuery = HistorySearchPolicy.buildSafeFtsPrefixQuery(normalized)
+        if (ftsQuery == null) return likeFlow
+
+        return combine(dao.searchFts(ftsQuery), likeFlow) { ftsMatches, likeMatches ->
+            (ftsMatches + likeMatches)
+                .distinctBy(ConversionEntity::id)
+                .sortedByDescending { it.createdAt }
+                .take(50)
         }
     }
 

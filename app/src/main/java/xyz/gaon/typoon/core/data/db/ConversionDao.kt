@@ -83,7 +83,18 @@ interface ConversionDao {
         LIMIT 50
     """,
     )
-    fun search(query: String): Flow<List<ConversionEntity>>
+    fun searchFts(query: String): Flow<List<ConversionEntity>>
+
+    @Query(
+        """
+        SELECT * FROM conversions
+        WHERE sourceText LIKE '%' || :escapedQuery || '%' ESCAPE '\'
+           OR resultText LIKE '%' || :escapedQuery || '%' ESCAPE '\'
+        ORDER BY createdAt DESC
+        LIMIT 50
+    """,
+    )
+    fun searchLike(escapedQuery: String): Flow<List<ConversionEntity>>
 
     @Query("SELECT * FROM conversions ORDER BY createdAt DESC")
     suspend fun getAllSortedByDate(): List<ConversionEntity>

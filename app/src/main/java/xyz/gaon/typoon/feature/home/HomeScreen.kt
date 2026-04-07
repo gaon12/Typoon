@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
@@ -89,6 +90,7 @@ fun HomeScreen(
     val starredHistory by viewModel.starredHistory.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val stats by viewModel.stats.collectAsState()
+    val clipboardSuggestion by viewModel.clipboardSuggestion.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
     val deletedMessage = stringResource(R.string.home_deleted_message)
@@ -190,6 +192,20 @@ fun HomeScreen(
                                 })
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
+                            clipboardSuggestion?.let { suggestion ->
+                                ClipboardSuggestionCard(
+                                    state = suggestion,
+                                    onApply = {
+                                        runHaptic()
+                                        viewModel.applyClipboardSuggestion()
+                                    },
+                                    onDismiss = {
+                                        runHaptic()
+                                        viewModel.dismissClipboardSuggestion()
+                                    },
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                             InputSection(
                                 inputText = inputText,
                                 onInputChange = viewModel::onInputChange,
@@ -287,6 +303,70 @@ private fun HomeHelpBanner(onDismiss: () -> Unit) {
                     contentDescription = stringResource(R.string.home_hide_help),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClipboardSuggestionCard(
+    state: ClipboardSuggestionState,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoFixHigh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource(R.string.home_suggestion_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Text(
+                text = stringResource(R.string.home_suggestion_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f),
+            )
+            Text(
+                text = stringResource(R.string.home_suggestion_source, state.originalText),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
+                maxLines = 1,
+            )
+            Text(
+                text = stringResource(R.string.home_suggestion_result, state.suggestedText),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.home_suggestion_dismiss))
+                }
+                TextButton(onClick = onApply) {
+                    Text(stringResource(R.string.home_suggestion_apply))
+                }
             }
         }
     }

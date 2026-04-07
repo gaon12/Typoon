@@ -190,8 +190,13 @@ dependencies {
     implementation(libs.play.review.ktx)
     implementation(libs.play.app.update)
     implementation(libs.play.services.ads)
+    implementation(libs.commonmark)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

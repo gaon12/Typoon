@@ -165,6 +165,12 @@ class SettingsViewModel
             }
         }
 
+        fun onClipboardSuggestionToggle(enabled: Boolean) {
+            viewModelScope.launch {
+                appPreferences.update { it.copy(clipboardSuggestionEnabled = enabled) }
+            }
+        }
+
         fun onMaxHistoryCountChange(delta: Int) {
             viewModelScope.launch {
                 appPreferences.update {

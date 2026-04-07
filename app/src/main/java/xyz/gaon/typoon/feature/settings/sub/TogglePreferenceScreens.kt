@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
@@ -85,6 +86,26 @@ fun AutoConvertClipboardSettingsScreen(
         onCheckedChange = viewModel::onAutoConvertClipboardToggle,
         noteTitle = stringResource(R.string.toggle_auto_convert_note_title),
         noteBody = stringResource(R.string.toggle_auto_convert_note_body),
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+@Composable
+fun ClipboardSuggestionSettingsScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel,
+) {
+    val settings by viewModel.settings.collectAsState()
+    TogglePreferenceDetailScreen(
+        title = stringResource(R.string.toggle_clipboard_suggestion_title),
+        chip = stringResource(R.string.toggle_clipboard_suggestion_chip),
+        headline = stringResource(R.string.toggle_clipboard_suggestion_headline),
+        description = stringResource(R.string.toggle_clipboard_suggestion_description),
+        icon = Icons.Default.AutoFixHigh,
+        checked = settings.clipboardSuggestionEnabled,
+        onCheckedChange = viewModel::onClipboardSuggestionToggle,
+        noteTitle = stringResource(R.string.toggle_clipboard_suggestion_note_title),
+        noteBody = stringResource(R.string.toggle_clipboard_suggestion_note_body),
         onNavigateBack = onNavigateBack,
     )
 }

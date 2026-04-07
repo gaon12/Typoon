@@ -35,6 +35,7 @@ data class AppSettings(
     val maxHistoryCount: Int = 50,
     val autoReadClipboardOnLaunch: Boolean = false,
     val autoConvertAfterClipboardRead: Boolean = false,
+    val clipboardSuggestionEnabled: Boolean = true,
     val hapticEnabled: Boolean = true,
     val showHelpBanner: Boolean = true,
     val onboardingCompleted: Boolean = false,
@@ -53,6 +54,7 @@ class AppPreferences(
         val MAX_HISTORY_COUNT = intPreferencesKey("max_history_count")
         val AUTO_READ_CLIPBOARD = booleanPreferencesKey("auto_read_clipboard")
         val AUTO_CONVERT_CLIPBOARD = booleanPreferencesKey("auto_convert_clipboard")
+        val CLIPBOARD_SUGGESTION_ENABLED = booleanPreferencesKey("clipboard_suggestion_enabled")
         val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
         val SHOW_HELP_BANNER = booleanPreferencesKey("show_help_banner")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -70,6 +72,7 @@ class AppPreferences(
                 maxHistoryCount = preferences[PreferencesKeys.MAX_HISTORY_COUNT] ?: 50,
                 autoReadClipboardOnLaunch = preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] ?: false,
                 autoConvertAfterClipboardRead = preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] ?: false,
+                clipboardSuggestionEnabled = preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] ?: true,
                 hapticEnabled = preferences[PreferencesKeys.HAPTIC_ENABLED] ?: true,
                 showHelpBanner = preferences[PreferencesKeys.SHOW_HELP_BANNER] ?: true,
                 onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false,
@@ -95,6 +98,7 @@ class AppPreferences(
                     maxHistoryCount = preferences[PreferencesKeys.MAX_HISTORY_COUNT] ?: 50,
                     autoReadClipboardOnLaunch = preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] ?: false,
                     autoConvertAfterClipboardRead = preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] ?: false,
+                    clipboardSuggestionEnabled = preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] ?: true,
                     hapticEnabled = preferences[PreferencesKeys.HAPTIC_ENABLED] ?: true,
                     showHelpBanner = preferences[PreferencesKeys.SHOW_HELP_BANNER] ?: true,
                     onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false,
@@ -109,6 +113,7 @@ class AppPreferences(
             preferences[PreferencesKeys.MAX_HISTORY_COUNT] = newSettings.maxHistoryCount
             preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] = newSettings.autoReadClipboardOnLaunch
             preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] = newSettings.autoConvertAfterClipboardRead
+            preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] = newSettings.clipboardSuggestionEnabled
             preferences[PreferencesKeys.HAPTIC_ENABLED] = newSettings.hapticEnabled
             preferences[PreferencesKeys.SHOW_HELP_BANNER] = newSettings.showHelpBanner
             preferences[PreferencesKeys.ONBOARDING_COMPLETED] = newSettings.onboardingCompleted

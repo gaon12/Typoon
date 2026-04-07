@@ -107,6 +107,8 @@
     <string name="settings_toggle_auto_read_summary">처음 홈으로 들어왔을 때 복사한 문장을 바로 불러옵니다.</string>
     <string name="settings_toggle_auto_convert_title">읽은 뒤 바로 변환</string>
     <string name="settings_toggle_auto_convert_summary">클립보드를 읽은 직후 결과 화면까지 이어서 엽니다.</string>
+    <string name="settings_toggle_clipboard_suggestion_title">클립보드 오타 제안</string>
+    <string name="settings_toggle_clipboard_suggestion_summary">오타 의심 텍스트가 감지되면 작은 추천 카드를 표시합니다.</string>
     <string name="settings_toggle_haptic_title">햅틱 피드백</string>
     <string name="settings_toggle_haptic_summary">버튼과 주요 상호작용에 짧은 진동을 줍니다.</string>
     <string name="settings_delete_dialog_title">전체 기록 삭제</string>
@@ -166,7 +168,14 @@
     <string name="home_message_shortcut_success">클립보드 내용을 바로 변환합니다.</string>
     <string name="home_message_clipboard_empty">클립보드에 텍스트가 없습니다.</string>
     <string name="home_message_clipboard_success">클립보드 내용을 입력창에 반영했습니다.</string>
+    <string name="home_message_suggestion_applied">추천 텍스트를 입력창에 반영했습니다.</string>
     <string name="home_message_input_required">먼저 변환할 텍스트를 입력해 주세요.</string>
+    <string name="home_suggestion_title">클립보드에서 오타 의심 문장을 찾았어요</string>
+    <string name="home_suggestion_body">키보드 배열 오타로 보이는 텍스트를 감지했습니다. 맞다면 아래 추천 결과를 적용해 보세요.</string>
+    <string name="home_suggestion_source">원문: %1$s</string>
+    <string name="home_suggestion_result">추천: %1$s</string>
+    <string name="home_suggestion_dismiss">닫기</string>
+    <string name="home_suggestion_apply">적용</string>
 
     <string name="history_title">기록</string>
     <string name="history_menu_more">더보기</string>
@@ -325,6 +334,12 @@
     <string name="toggle_auto_convert_description">클립보드에서 읽은 문장을 바로 변환해서 결과 화면으로 이어집니다. 빠르지만, 일반 문장까지 곧바로 열 수 있어 사용 습관에 따라 선호가 갈릴 수 있습니다.</string>
     <string name="toggle_auto_convert_note_title">현재 동작</string>
     <string name="toggle_auto_convert_note_body">이 설정이 켜져 있으면 복사한 문장이 정상 문장이든 오타 복구 후보든 바로 결과 화면으로 이어집니다.</string>
+    <string name="toggle_clipboard_suggestion_title">클립보드 오타 제안</string>
+    <string name="toggle_clipboard_suggestion_chip">예측 카드</string>
+    <string name="toggle_clipboard_suggestion_headline">변환 전에 복구 후보를 먼저 제안</string>
+    <string name="toggle_clipboard_suggestion_description">홈 진입 시 클립보드를 1회 확인하고, 배열 오타 가능성이 높을 때만 작은 추천 카드를 보여줍니다.</string>
+    <string name="toggle_clipboard_suggestion_note_title">방해되지 않도록</string>
+    <string name="toggle_clipboard_suggestion_note_body">신뢰도가 충분히 높은 경우에만 표시되며, 즉시 닫을 수 있습니다.</string>
     <string name="toggle_haptic_title">햅틱 피드백</string>
     <string name="toggle_haptic_chip">반응감</string>
     <string name="toggle_haptic_headline">주요 동작에 짧은 촉감을 더하기</string>

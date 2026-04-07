@@ -107,6 +107,8 @@
     <string name="settings_toggle_auto_read_summary">Load the latest copied sentence when you first open Home.</string>
     <string name="settings_toggle_auto_convert_title">Convert immediately after reading</string>
     <string name="settings_toggle_auto_convert_summary">Move straight to the result screen after loading clipboard text.</string>
+    <string name="settings_toggle_clipboard_suggestion_title">Clipboard typo suggestion</string>
+    <string name="settings_toggle_clipboard_suggestion_summary">Show a small recommendation card when clipboard text looks mistyped.</string>
     <string name="settings_toggle_haptic_title">Haptic feedback</string>
     <string name="settings_toggle_haptic_summary">Add short vibration cues to major actions.</string>
     <string name="settings_delete_dialog_title">Delete all history</string>
@@ -166,7 +168,14 @@
     <string name="home_message_shortcut_success">Converting clipboard text right away.</string>
     <string name="home_message_clipboard_empty">There is no text in the clipboard.</string>
     <string name="home_message_clipboard_success">Clipboard text was loaded into the input.</string>
+    <string name="home_message_suggestion_applied">Suggested text applied to input.</string>
     <string name="home_message_input_required">Enter some text to convert first.</string>
+    <string name="home_suggestion_title">Typo candidate found in clipboard</string>
+    <string name="home_suggestion_body">We found text that looks like a keyboard-layout typo. Apply the recovered text if it looks right.</string>
+    <string name="home_suggestion_source">Original: %1$s</string>
+    <string name="home_suggestion_result">Suggestion: %1$s</string>
+    <string name="home_suggestion_dismiss">Dismiss</string>
+    <string name="home_suggestion_apply">Apply</string>
 
     <string name="history_title">History</string>
     <string name="history_menu_more">More</string>
@@ -325,6 +334,12 @@
     <string name="toggle_auto_convert_description">Clipboard text is converted immediately and opened in the result screen. It is fast, but even normal sentences may open right away depending on your usage.</string>
     <string name="toggle_auto_convert_note_title">Current behavior</string>
     <string name="toggle_auto_convert_note_body">When enabled, copied text goes straight to the result screen whether it is a typo candidate or a normal sentence.</string>
+    <string name="toggle_clipboard_suggestion_title">Clipboard typo suggestion</string>
+    <string name="toggle_clipboard_suggestion_chip">Prediction card</string>
+    <string name="toggle_clipboard_suggestion_headline">Suggest recovered text before you convert</string>
+    <string name="toggle_clipboard_suggestion_description">Typoon checks clipboard text once when Home opens and shows a small card if the text strongly looks like a layout typo.</string>
+    <string name="toggle_clipboard_suggestion_note_title">How it stays unobtrusive</string>
+    <string name="toggle_clipboard_suggestion_note_body">The card appears only when confidence is high enough and you can dismiss it immediately.</string>
     <string name="toggle_haptic_title">Haptic feedback</string>
     <string name="toggle_haptic_chip">Tactile response</string>
     <string name="toggle_haptic_headline">Add a light physical cue to major actions</string>

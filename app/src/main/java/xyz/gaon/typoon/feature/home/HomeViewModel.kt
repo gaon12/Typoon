@@ -32,6 +32,12 @@ import xyz.gaon.typoon.core.engine.ConversionResult
 import xyz.gaon.typoon.core.text.TextPayloadSanitizer
 import javax.inject.Inject
 
+data class ClipboardSuggestionState(
+    val originalText: String,
+    val suggestedText: String,
+    val confidence: Float,
+)
+
 sealed interface HomeUiEvent {
     data object NavigateToResult : HomeUiEvent
 
@@ -62,6 +68,11 @@ class HomeViewModel
         private val _events = MutableSharedFlow<HomeUiEvent>(extraBufferCapacity = 4)
         val events: SharedFlow<HomeUiEvent> = _events.asSharedFlow()
         private var hasHandledInitialLaunch = false
+        private var hasCheckedSuggestionThisSession = false
+        private var lastSuggestedClipboardText: String? = null
+
+        private val _clipboardSuggestion = MutableStateFlow<ClipboardSuggestionState?>(null)
+        val clipboardSuggestion: StateFlow<ClipboardSuggestionState?> = _clipboardSuggestion.asStateFlow()
 
         val recentHistory: StateFlow<List<ConversionEntity>> =
             historyRepository
@@ -117,6 +128,7 @@ class HomeViewModel
                 if (forceReadClipboard) {
                     hasHandledInitialLaunch = true
                     appSessionState.hasHandledHomeAutoRead = true
+                    _clipboardSuggestion.value = null
                     readClipboardIntoInput(
                         autoConvert = true,
                         emptyMessage = appContext.getString(R.string.home_message_shortcut_empty),
@@ -131,24 +143,43 @@ class HomeViewModel
                 appSessionState.hasHandledHomeAutoRead = true
 
                 val currentSettings = appPreferences.settings.first()
-                if (!currentSettings.autoReadClipboardOnLaunch) return@launch
+                if (currentSettings.autoReadClipboardOnLaunch) {
+                    readClipboardIntoInput(
+                        autoConvert = currentSettings.autoConvertAfterClipboardRead,
+                        emptyMessage = appContext.getString(R.string.home_message_clipboard_empty),
+                        successMessage = appContext.getString(R.string.home_message_clipboard_success),
+                    )
+                    return@launch
+                }
 
-                readClipboardIntoInput(
-                    autoConvert = currentSettings.autoConvertAfterClipboardRead,
-                    emptyMessage = appContext.getString(R.string.home_message_clipboard_empty),
-                    successMessage = appContext.getString(R.string.home_message_clipboard_success),
-                )
+                if (hasCheckedSuggestionThisSession) return@launch
+                if (!currentSettings.clipboardSuggestionEnabled) return@launch
+                maybeShowClipboardSuggestion()
             }
         }
 
         fun onReadClipboard() {
             viewModelScope.launch {
+                _clipboardSuggestion.value = null
                 readClipboardIntoInput(
                     autoConvert = settings.value.autoConvertAfterClipboardRead,
                     emptyMessage = appContext.getString(R.string.home_message_shortcut_empty),
                     successMessage = appContext.getString(R.string.home_message_clipboard_success),
                 )
             }
+        }
+
+        fun applyClipboardSuggestion() {
+            val suggestion = _clipboardSuggestion.value ?: return
+            _inputText.value = suggestion.suggestedText.take(MAX_INPUT_LENGTH)
+            _clipboardSuggestion.value = null
+            viewModelScope.launch {
+                _events.emit(HomeUiEvent.ShowMessage(appContext.getString(R.string.home_message_suggestion_applied)))
+            }
+        }
+
+        fun dismissClipboardSuggestion() {
+            _clipboardSuggestion.value = null
         }
 
         fun onConvert() {
@@ -184,6 +215,50 @@ class HomeViewModel
             if (autoConvert && convertCurrentInput()) {
                 _events.emit(HomeUiEvent.NavigateToResult)
             }
+        }
+
+        private suspend fun maybeShowClipboardSuggestion() {
+            hasCheckedSuggestionThisSession = true
+            val clipboardText =
+                TextPayloadSanitizer
+                    .sanitize(clipboardHelper.readText()?.trim())
+                    .take(MAX_INPUT_LENGTH)
+
+            if (clipboardText.isBlank() || clipboardText == lastSuggestedClipboardText) return
+            if (!clipboardText.isSuspiciousTypoCandidate()) return
+
+            val conversion = conversionEngine.convert(clipboardText)
+            val suggestedText = conversion.resultText.trim()
+            if (!shouldOfferSuggestion(clipboardText, suggestedText, conversion.confidence)) return
+
+            _clipboardSuggestion.value =
+                ClipboardSuggestionState(
+                    originalText = clipboardText,
+                    suggestedText = suggestedText,
+                    confidence = conversion.confidence,
+                )
+            lastSuggestedClipboardText = clipboardText
+        }
+
+        private fun shouldOfferSuggestion(
+            original: String,
+            suggested: String,
+            confidence: Float,
+        ): Boolean {
+            if (confidence < 0.55f) return false
+            if (suggested.isBlank()) return false
+            if (original == suggested) return false
+            val normalize = { text: String -> text.filter(Char::isLetterOrDigit).lowercase() }
+            return normalize(original) != normalize(suggested)
+        }
+
+        private fun String.isSuspiciousTypoCandidate(): Boolean {
+            if (length !in 2..180) return false
+            if (contains('\n')) return false
+            val hasHangul = any { it in '\uAC00'..'\uD7A3' || it in '\u3131'..'\u3163' }
+            val hasLatin = any { it.isLetter() && it.code < 128 }
+            val hasDigit = any(Char::isDigit)
+            return hasHangul || hasLatin || hasDigit
         }
 
         private suspend fun convertCurrentInput(): Boolean {

@@ -52,6 +52,7 @@ import xyz.gaon.typoon.feature.settings.SettingsViewModel
 import xyz.gaon.typoon.feature.settings.sub.AboutSettingsScreen
 import xyz.gaon.typoon.feature.settings.sub.AutoConvertClipboardSettingsScreen
 import xyz.gaon.typoon.feature.settings.sub.AutoReadClipboardSettingsScreen
+import xyz.gaon.typoon.feature.settings.sub.ClipboardSuggestionSettingsScreen
 import xyz.gaon.typoon.feature.settings.sub.ContributorsScreen
 import xyz.gaon.typoon.feature.settings.sub.DonorsScreen
 import xyz.gaon.typoon.feature.settings.sub.EasterEggScreen
@@ -294,6 +295,9 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
                     onNavigateToAutoConvertClipboard = {
                         navController.navigate(AppRoute.SettingsAutoConvertClipboard.route)
                     },
+                    onNavigateToClipboardSuggestion = {
+                        navController.navigate(AppRoute.SettingsClipboardSuggestion.route)
+                    },
                     onNavigateToHaptic = {
                         navController.navigate(AppRoute.SettingsHaptic.route)
                     },
@@ -355,6 +359,14 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
             composable(AppRoute.SettingsAutoConvertClipboard.route) {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 AutoConvertClipboardSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    viewModel = viewModel,
+                )
+            }
+
+            composable(AppRoute.SettingsClipboardSuggestion.route) {
+                val viewModel: SettingsViewModel = hiltViewModel()
+                ClipboardSuggestionSettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     viewModel = viewModel,
                 )

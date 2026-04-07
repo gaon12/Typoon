@@ -4,6 +4,8 @@ package xyz.gaon.typoon.feature.settings
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.text.method.LinkMovementMethod
+import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -32,15 +34,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.core.text.HtmlCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import xyz.gaon.typoon.BuildConfig
 import xyz.gaon.typoon.R
 import xyz.gaon.typoon.core.data.datastore.ThemeMode
@@ -56,6 +63,7 @@ fun SettingsScreen(
     onNavigateToSaveHistory: () -> Unit,
     onNavigateToAutoReadClipboard: () -> Unit,
     onNavigateToAutoConvertClipboard: () -> Unit,
+    onNavigateToClipboardSuggestion: () -> Unit,
     onNavigateToHaptic: () -> Unit,
     onNavigateToDictionary: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -201,6 +209,14 @@ fun SettingsScreen(
                         checked = settings.autoConvertAfterClipboardRead,
                         onCheckedChange = viewModel::onAutoConvertClipboardToggle,
                         onOpenDetail = onNavigateToAutoConvertClipboard,
+                    )
+                    SettingsRowDivider()
+                    SettingsToggleNavigationRow(
+                        title = stringResource(R.string.settings_toggle_clipboard_suggestion_title),
+                        description = stringResource(R.string.settings_toggle_clipboard_suggestion_summary),
+                        checked = settings.clipboardSuggestionEnabled,
+                        onCheckedChange = viewModel::onClipboardSuggestionToggle,
+                        onOpenDetail = onNavigateToClipboardSuggestion,
                     )
                     SettingsRowDivider()
                     SettingsToggleNavigationRow(
@@ -373,9 +389,9 @@ private fun ReleaseNotesDialog(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Text(
-                    text = state.notes,
-                    style = MaterialTheme.typography.bodyMedium,
+                MarkdownText(
+                    markdown = state.notes,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
@@ -415,6 +431,39 @@ private fun ReleaseNotesDialog(
                     Text(stringResource(R.string.settings_release_notes_open_github))
                 }
             }
+        },
+    )
+}
+
+private val releaseNotesMarkdownParser: Parser = Parser.builder().build()
+private val releaseNotesHtmlRenderer: HtmlRenderer = HtmlRenderer.builder().build()
+
+private fun markdownToHtml(markdown: String): String {
+    val document = releaseNotesMarkdownParser.parse(markdown)
+    return releaseNotesHtmlRenderer.render(document)
+}
+
+@Composable
+private fun MarkdownText(
+    markdown: String,
+    modifier: Modifier = Modifier,
+) {
+    val html = remember(markdown) { markdownToHtml(markdown) }
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val linkColor = MaterialTheme.colorScheme.primary.toArgb()
+
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            TextView(context).apply {
+                linksClickable = true
+                movementMethod = LinkMovementMethod.getInstance()
+            }
+        },
+        update = { textView ->
+            textView.setTextColor(textColor)
+            textView.setLinkTextColor(linkColor)
+            textView.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY)
         },
     )
 }

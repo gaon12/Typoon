@@ -29,6 +29,8 @@ sealed class AppRoute(
 
     data object SettingsAutoConvertClipboard : AppRoute("settings/auto_convert_clipboard")
 
+    data object SettingsClipboardSuggestion : AppRoute("settings/clipboard_suggestion")
+
     data object SettingsHaptic : AppRoute("settings/haptic")
 
     data object SettingsPrivacy : AppRoute("settings/privacy")
