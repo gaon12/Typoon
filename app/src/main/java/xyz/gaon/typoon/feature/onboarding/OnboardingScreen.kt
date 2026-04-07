@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
@@ -136,12 +138,14 @@ fun OnboardingScreen(
                         .weight(1f),
             ) { page ->
                 val slide = slides[page]
+                val pageScrollState = rememberScrollState()
                 Column(
                     modifier =
                         Modifier
                             .fillMaxSize()
+                            .verticalScroll(pageScrollState)
                             .padding(top = 8.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Surface(
@@ -173,7 +177,7 @@ fun OnboardingScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp),
+                                .padding(vertical = 4.dp),
                     )
 
                     Surface(
