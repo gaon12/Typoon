@@ -1,4 +1,11 @@
+import com.github.spotbugs.snom.Confidence
+import com.github.spotbugs.snom.Effort
+import com.github.spotbugs.snom.SpotBugsTask
 import net.ltgt.gradle.errorprone.errorprone
+import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.plugins.quality.Pmd
+import org.gradle.api.tasks.compile.JavaCompile
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 plugins {
     alias(libs.plugins.android.application)
@@ -28,7 +35,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,7 +70,7 @@ ktlint {
     android.set(true)
     version.set("1.5.0")
     reporters {
-        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+        reporter(ReporterType.PLAIN)
     }
     filter {
         exclude { element -> element.file.path.contains("build/") }
@@ -89,12 +96,12 @@ pmd {
 }
 
 spotbugs {
-    effort.set(com.github.spotbugs.snom.Effort.MAX)
-    reportLevel.set(com.github.spotbugs.snom.Confidence.LOW)
+    effort.set(Effort.MAX)
+    reportLevel.set(Confidence.LOW)
     showStackTraces.set(true)
 }
 
-tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+tasks.withType<JavaCompile>().configureEach {
     options.errorprone {
         disableWarningsInGeneratedCode.set(true)
         allErrorsAsWarnings.set(false)
@@ -102,21 +109,21 @@ tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     }
 }
 
-tasks.withType<org.gradle.api.plugins.quality.Checkstyle>().configureEach {
+tasks.withType<Checkstyle>().configureEach {
     reports {
         xml.required.set(false)
         html.required.set(true)
     }
 }
 
-tasks.withType<org.gradle.api.plugins.quality.Pmd>().configureEach {
+tasks.withType<Pmd>().configureEach {
     reports {
         xml.required.set(false)
         html.required.set(true)
     }
 }
 
-val checkstyleMainJava by tasks.registering(org.gradle.api.plugins.quality.Checkstyle::class) {
+val checkstyleMainJava by tasks.registering(Checkstyle::class) {
     description = "Runs Checkstyle on main Java sources."
     group = "verification"
     source("src/main/java")
@@ -124,7 +131,7 @@ val checkstyleMainJava by tasks.registering(org.gradle.api.plugins.quality.Check
     classpath = files()
 }
 
-val pmdMainJava by tasks.registering(org.gradle.api.plugins.quality.Pmd::class) {
+val pmdMainJava by tasks.registering(Pmd::class) {
     description = "Runs PMD on main Java sources."
     group = "verification"
     source("src/main/java")
@@ -133,7 +140,7 @@ val pmdMainJava by tasks.registering(org.gradle.api.plugins.quality.Pmd::class) 
     ruleSets = emptyList()
 }
 
-val spotbugsDebug by tasks.registering(com.github.spotbugs.snom.SpotBugsTask::class) {
+val spotbugsDebug by tasks.registering(SpotBugsTask::class) {
     description = "Runs SpotBugs on debug Java bytecode."
     group = "verification"
     dependsOn("compileDebugKotlin", "compileDebugJavaWithJavac")

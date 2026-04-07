@@ -10,7 +10,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.History
@@ -81,6 +85,12 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
     val bottomNavRoutes = bottomNavItems.map { it.route }
 
     val showBottomBar = currentDestination?.route in bottomNavRoutes
+    val rootContentInsets =
+        if (showBottomBar) {
+            WindowInsets(0, 0, 0, 0)
+        } else {
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        }
 
     var homeScrollTrigger by remember { mutableIntStateOf(0) }
     var historyScrollTrigger by remember { mutableIntStateOf(0) }
@@ -109,6 +119,7 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
     }
 
     Scaffold(
+        contentWindowInsets = rootContentInsets,
         bottomBar = {
             if (showBottomBar) {
                 Column {

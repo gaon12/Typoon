@@ -58,7 +58,7 @@ fun SettingsPageScaffold(
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = {
             snackbarHostState?.let { hostState ->
                 SnackbarHost(hostState = hostState)
