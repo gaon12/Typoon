@@ -3,6 +3,7 @@ package xyz.gaon.typoon
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -33,7 +34,7 @@ class MainActivity : AppCompatActivity() {
             splashScreen.setOnExitAnimationListener { it.remove() }
         }
         handleIntentAction()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        configureEdgeToEdgeWindow()
         setContent {
             val shortcutClipboardToken by autoClipboardRequestToken
             val settings by viewModel.settings.collectAsState()
@@ -82,6 +83,17 @@ class MainActivity : AppCompatActivity() {
             intent =
                 Intent(intent).apply {
                     action = Intent.ACTION_MAIN
+                }
+        }
+    }
+
+    private fun configureEdgeToEdgeWindow() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.attributes =
+                window.attributes.apply {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
                 }
         }
     }
