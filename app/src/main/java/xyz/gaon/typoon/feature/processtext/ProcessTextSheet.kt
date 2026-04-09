@@ -27,7 +27,7 @@ fun ProcessTextSheet(
     onReplace: ((String) -> Unit)?,
     viewModel: ResultViewModel = hiltViewModel(),
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val sourceText by viewModel.sourceText.collectAsState()
     val result by viewModel.result.collectAsState()
     val copyDone by viewModel.copyDone.collectAsState()
