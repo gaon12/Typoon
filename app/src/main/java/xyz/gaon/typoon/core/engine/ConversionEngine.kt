@@ -1,5 +1,7 @@
 package xyz.gaon.typoon.core.engine
 
+import java.text.Normalizer
+
 data class ConversionResult(
     val resultText: String,
     val direction: ConversionDirection,
@@ -36,7 +38,7 @@ class ConversionEngine {
     )
 
     fun setExceptions(words: Set<String>) {
-        exceptions = words.map { it.trim() }.toSet()
+        exceptions = words.map { normalizeForProcessing(it).trim() }.toSet()
     }
 
     fun setFeedbackAdjustment(negativeFeedbackRate: Float) {
@@ -44,16 +46,17 @@ class ConversionEngine {
     }
 
     fun convert(input: String): ConversionResult {
-        if (input.isBlank()) return ConversionResult(input, ConversionDirection.UNKNOWN, 0.0f)
+        val normalizedInput = normalizeForProcessing(input)
+        if (normalizedInput.isBlank()) return ConversionResult(normalizedInput, ConversionDirection.UNKNOWN, 0.0f)
 
-        val hasEng = input.any { it.isEnglishLetter() }
-        val hasKor = input.any { it.isHangul() }
+        val hasEng = normalizedInput.any { it.isEnglishLetter() }
+        val hasKor = normalizedInput.any { it.isHangul() }
         if (hasEng && hasKor) {
-            return convertMixedInput(input)
+            return convertMixedInput(normalizedInput)
         }
 
-        val direction = inferDirection(input)
-        val result = convertForced(input, direction)
+        val direction = inferDirection(normalizedInput)
+        val result = convertForced(normalizedInput, direction)
 
         val words = result.resultText.split(Regex("\\s+")).filter { it.length >= 2 }
         if (words.isNotEmpty()) {
@@ -120,13 +123,14 @@ class ConversionEngine {
     }
 
     fun convertForced(input: String, direction: ConversionDirection): ConversionResult {
-        if (direction == ConversionDirection.UNKNOWN) return ConversionResult(input, direction, 0.0f)
+        val normalizedInput = normalizeForProcessing(input)
+        if (direction == ConversionDirection.UNKNOWN) return ConversionResult(normalizedInput, direction, 0.0f)
 
-        val confidence = LanguageScorer.calculateConfidence(input, direction, feedbackPenalty)
+        val confidence = LanguageScorer.calculateConfidence(normalizedInput, direction, feedbackPenalty)
         val sb = StringBuilder()
         val currentToken = StringBuilder()
 
-        for (char in input) {
+        for (char in normalizedInput) {
             if (char.isLetter()) {
                 currentToken.append(char)
             } else {
@@ -144,6 +148,16 @@ class ConversionEngine {
 
         return ConversionResult(sb.toString(), direction, confidence)
     }
+
+    fun resolveReverseDirection(
+        sourceText: String,
+        currentDirection: ConversionDirection,
+    ): ConversionDirection =
+        when (currentDirection) {
+            ConversionDirection.ENG_TO_KOR -> ConversionDirection.KOR_TO_ENG
+            ConversionDirection.KOR_TO_ENG -> ConversionDirection.ENG_TO_KOR
+            ConversionDirection.UNKNOWN -> inferReverseDirectionForUnknown(sourceText)
+        }
 
     private fun processToken(token: String, direction: ConversionDirection): String {
         if (token in exceptions) return token
@@ -178,6 +192,19 @@ class ConversionEngine {
             engCount > korCount -> ConversionDirection.ENG_TO_KOR
             korCount > engCount -> ConversionDirection.KOR_TO_ENG
             else -> ConversionDirection.UNKNOWN
+        }
+    }
+
+    private fun inferReverseDirectionForUnknown(input: String): ConversionDirection {
+        val normalizedInput = normalizeForProcessing(input)
+        val engCount = normalizedInput.count { it.isEnglishLetter() }
+        val korCount = normalizedInput.count { it.isHangul() }
+
+        return when {
+            korCount > engCount -> ConversionDirection.KOR_TO_ENG
+            engCount > korCount -> ConversionDirection.ENG_TO_KOR
+            korCount > 0 -> ConversionDirection.KOR_TO_ENG
+            else -> ConversionDirection.ENG_TO_KOR
         }
     }
 
@@ -299,8 +326,14 @@ class ConversionEngine {
         return sb.toString()
     }
 
+    private fun normalizeForProcessing(input: String): String = Normalizer.normalize(input, Normalizer.Form.NFC)
+
     private fun Char.isEnglishLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
     private fun Char.isHangulSyllable(): Boolean = this.code in 0xAC00..0xD7AF
-    private fun Char.isHangulJamo(): Boolean = this.code in 0x3131..0x318E
+    private fun Char.isHangulJamo(): Boolean =
+        this.code in 0x3131..0x318E ||
+            this.code in 0x1100..0x11FF ||
+            this.code in 0xA960..0xA97F ||
+            this.code in 0xD7B0..0xD7FF
     private fun Char.isHangul(): Boolean = isHangulSyllable() || isHangulJamo()
 }

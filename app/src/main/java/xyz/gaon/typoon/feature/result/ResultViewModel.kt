@@ -23,7 +23,6 @@ import xyz.gaon.typoon.core.data.datastore.AppSettings
 import xyz.gaon.typoon.core.data.db.ConversionEntity
 import xyz.gaon.typoon.core.data.repository.HistoryRepository
 import xyz.gaon.typoon.core.di.PendingConversionHolder
-import xyz.gaon.typoon.core.engine.ConversionDirection
 import xyz.gaon.typoon.core.engine.ConversionEngine
 import xyz.gaon.typoon.core.engine.ConversionResult
 import javax.inject.Inject
@@ -168,12 +167,7 @@ class ResultViewModel
         fun onReverse() {
             syncPendingHistoryMetadata()
             val current = _result.value ?: return
-            val newDirection =
-                when (current.direction) {
-                    ConversionDirection.ENG_TO_KOR -> ConversionDirection.KOR_TO_ENG
-                    ConversionDirection.KOR_TO_ENG -> ConversionDirection.ENG_TO_KOR
-                    ConversionDirection.UNKNOWN -> ConversionDirection.ENG_TO_KOR
-                }
+            val newDirection = conversionEngine.resolveReverseDirection(_sourceText.value, current.direction)
             val newResult = conversionEngine.convertForced(_sourceText.value, newDirection)
             _result.value = newResult
             _editedResultText.value = null

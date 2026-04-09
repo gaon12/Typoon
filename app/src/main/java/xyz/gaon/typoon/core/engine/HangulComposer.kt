@@ -10,10 +10,27 @@ object HangulComposer {
     private val JONGSUNG = listOf(
         "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
     )
+    private val CANONICAL_CHOSUNG = listOf(
+        "ᄀ", "ᄁ", "ᄂ", "ᄃ", "ᄄ", "ᄅ", "ᄆ", "ᄇ", "ᄈ", "ᄉ", "ᄊ", "ᄋ", "ᄌ", "ᄍ", "ᄎ", "ᄏ", "ᄐ", "ᄑ", "ᄒ"
+    )
+    private val CANONICAL_JUNGSUNG = listOf(
+        "ᅡ", "ᅢ", "ᅣ", "ᅤ", "ᅥ", "ᅦ", "ᅧ", "ᅨ", "ᅩ", "ᅪ", "ᅫ", "ᅬ", "ᅭ", "ᅮ", "ᅯ", "ᅰ", "ᅱ", "ᅲ", "ᅳ", "ᅴ", "ᅵ"
+    )
+    private val CANONICAL_JONGSUNG = listOf(
+        "", "ᆨ", "ᆩ", "ᆪ", "ᆫ", "ᆬ", "ᆭ", "ᆮ", "ᆯ", "ᆰ", "ᆱ", "ᆲ", "ᆳ", "ᆴ", "ᆵ", "ᆶ", "ᆷ", "ᆸ", "ᆹ", "ᆺ", "ᆻ", "ᆼ", "ᆽ", "ᆾ", "ᆿ", "ᇀ", "ᇁ", "ᇂ"
+    )
 
     private val CHOSUNG_MAP = CHOSUNG.withIndex().associate { it.value to it.index }
     private val JUNGSUNG_MAP = JUNGSUNG.withIndex().associate { it.value to it.index }
     private val JONGSUNG_MAP = JONGSUNG.withIndex().associate { it.value to it.index }
+    private val CANONICAL_TO_COMPATIBILITY_JAMO =
+        buildMap {
+            CHOSUNG.indices.forEach { index -> put(CANONICAL_CHOSUNG[index], CHOSUNG[index]) }
+            JUNGSUNG.indices.forEach { index -> put(CANONICAL_JUNGSUNG[index], JUNGSUNG[index]) }
+            JONGSUNG.indices
+                .filter { index -> CANONICAL_JONGSUNG[index].isNotEmpty() }
+                .forEach { index -> put(CANONICAL_JONGSUNG[index], JONGSUNG[index]) }
+        }
 
     private val COMPLEX_VOWELS = mapOf(
         "ㅗㅏ" to "ㅘ", "ㅗㅐ" to "ㅙ", "ㅗㅣ" to "ㅚ", "ㅜㅓ" to "ㅝ", "ㅜㅔ" to "ㅞ", "ㅜㅣ" to "ㅟ", "ㅡㅣ" to "ㅢ"
@@ -25,39 +42,43 @@ object HangulComposer {
     private val REVERSE_COMPLEX_VOWELS = COMPLEX_VOWELS.entries.associate { it.value to it.key }
     private val REVERSE_COMPLEX_CONSONANTS = COMPLEX_CONSONANTS.entries.associate { it.value to it.key }
 
+    private fun toCompatibilityJamo(jamo: String): String = CANONICAL_TO_COMPATIBILITY_JAMO[jamo] ?: jamo
+
     fun decomposeJamo(jamo: String): String {
-        REVERSE_COMPLEX_VOWELS[jamo]?.let { return it }
-        REVERSE_COMPLEX_CONSONANTS[jamo]?.let { return it }
-        return jamo
+        val compatibilityJamo = toCompatibilityJamo(jamo)
+        REVERSE_COMPLEX_VOWELS[compatibilityJamo]?.let { return it }
+        REVERSE_COMPLEX_CONSONANTS[compatibilityJamo]?.let { return it }
+        return compatibilityJamo
     }
 
-    fun isChosung(jamo: String): Boolean = CHOSUNG_MAP.containsKey(jamo)
-    fun isJungsung(jamo: String): Boolean = JUNGSUNG_MAP.containsKey(jamo)
+    fun isChosung(jamo: String): Boolean = CHOSUNG_MAP.containsKey(toCompatibilityJamo(jamo))
+    fun isJungsung(jamo: String): Boolean = JUNGSUNG_MAP.containsKey(toCompatibilityJamo(jamo))
 
     fun compose(jamos: List<String>): String {
         if (jamos.isEmpty()) return ""
+        val normalizedJamos = jamos.map(::toCompatibilityJamo)
         val result = StringBuilder()
         var i = 0
 
-        while (i < jamos.size) {
-            val cIdx = CHOSUNG_MAP[jamos[i]] ?: -1
+        while (i < normalizedJamos.size) {
+            val cIdx = CHOSUNG_MAP[normalizedJamos[i]] ?: -1
             if (cIdx == -1) {
-                result.append(jamos[i])
+                result.append(normalizedJamos[i])
                 i++
                 continue
             }
 
-            if (i + 1 >= jamos.size) {
-                result.append(jamos[i])
+            if (i + 1 >= normalizedJamos.size) {
+                result.append(normalizedJamos[i])
                 i++
                 continue
             }
 
-            var vIdx = JUNGSUNG_MAP[jamos[i + 1]] ?: -1
+            var vIdx = JUNGSUNG_MAP[normalizedJamos[i + 1]] ?: -1
             var vSize = 1
 
-            if (i + 2 < jamos.size) {
-                val combinedV = COMPLEX_VOWELS[jamos[i + 1] + jamos[i + 2]]
+            if (i + 2 < normalizedJamos.size) {
+                val combinedV = COMPLEX_VOWELS[normalizedJamos[i + 1] + normalizedJamos[i + 2]]
                 if (combinedV != null) {
                     val nextVIdx = JUNGSUNG_MAP[combinedV] ?: -1
                     if (nextVIdx != -1) {
@@ -68,7 +89,7 @@ object HangulComposer {
             }
 
             if (vIdx == -1) {
-                result.append(jamos[i])
+                result.append(normalizedJamos[i])
                 i++
                 continue
             }
@@ -76,10 +97,10 @@ object HangulComposer {
             var tIdx = 0
             var tSize = 0
 
-            if (i + vSize + 1 < jamos.size) {
-                val nextChar = jamos[i + vSize + 1]
-                val isNextNextVowel = if (i + vSize + 2 < jamos.size) {
-                    val nextNextChar = jamos[i + vSize + 2]
+            if (i + vSize + 1 < normalizedJamos.size) {
+                val nextChar = normalizedJamos[i + vSize + 1]
+                val isNextNextVowel = if (i + vSize + 2 < normalizedJamos.size) {
+                    val nextNextChar = normalizedJamos[i + vSize + 2]
                     // Check if it's a direct vowel or start of a complex vowel
                     isJungsung(nextNextChar)
                 } else {
@@ -87,10 +108,10 @@ object HangulComposer {
                 }
 
                 if (CHOSUNG_MAP.containsKey(nextChar) && !isNextNextVowel) {
-                    if (i + vSize + 2 < jamos.size) {
-                        val nextNextChar = jamos[i + vSize + 2]
-                        val isNextNextNextVowel = if (i + vSize + 3 < jamos.size) {
-                            isJungsung(jamos[i + vSize + 3])
+                    if (i + vSize + 2 < normalizedJamos.size) {
+                        val nextNextChar = normalizedJamos[i + vSize + 2]
+                        val isNextNextNextVowel = if (i + vSize + 3 < normalizedJamos.size) {
+                            isJungsung(normalizedJamos[i + vSize + 3])
                         } else {
                             false
                         }

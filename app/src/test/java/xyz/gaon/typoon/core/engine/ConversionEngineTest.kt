@@ -3,6 +3,7 @@ package xyz.gaon.typoon.core.engine
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.text.Normalizer
 
 class ConversionEngineTest {
     private lateinit var engine: ConversionEngine
@@ -189,5 +190,24 @@ class ConversionEngineTest {
     fun `Complex jamo with trailing vowels`() {
         val input = "rksms"
         assertEquals("가는", engine.convertForced(input, ConversionDirection.ENG_TO_KOR).resultText)
+    }
+
+    @Test
+    fun `KOR_TO_ENG - NFD hangul syllables are normalized before conversion`() {
+        val input = Normalizer.normalize("프로젝트", Normalizer.Form.NFD)
+        val expected = "vmfhwprxm"
+
+        val result = engine.convertForced(input, ConversionDirection.KOR_TO_ENG)
+
+        assertEquals(expected, result.resultText)
+    }
+
+    @Test
+    fun `resolveReverseDirection prefers KOR_TO_ENG for unknown hangul-heavy mixed input`() {
+        val input = "Mㅛ ㅡㅑㅇㅇㅣㄷ ㄴㅊㅗㅐㅐㅣ"
+
+        val direction = engine.resolveReverseDirection(input, ConversionDirection.UNKNOWN)
+
+        assertEquals(ConversionDirection.KOR_TO_ENG, direction)
     }
 }

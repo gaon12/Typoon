@@ -2,6 +2,7 @@ package xyz.gaon.typoon.core.text
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.text.Normalizer
 
 class TextPayloadSanitizerTest {
     @Test
@@ -16,5 +17,14 @@ class TextPayloadSanitizerTest {
 
         assertEquals(TextPayloadSanitizer.MAX_TEXT_LENGTH, sanitized.length)
         assertEquals('h', sanitized.first())
+    }
+
+    @Test
+    fun sanitize_normalizesHangulNfdToNfc() {
+        val input = Normalizer.normalize("안녕", Normalizer.Form.NFD)
+
+        val sanitized = TextPayloadSanitizer.sanitize(input)
+
+        assertEquals("안녕", sanitized)
     }
 }

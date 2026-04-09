@@ -255,7 +255,14 @@ class HomeViewModel
         private fun String.isSuspiciousTypoCandidate(): Boolean {
             if (length !in 2..180) return false
             if (contains('\n')) return false
-            val hasHangul = any { it in '\uAC00'..'\uD7A3' || it in '\u3131'..'\u3163' }
+            val hasHangul =
+                any {
+                    it in '\uAC00'..'\uD7A3' ||
+                        it in '\u3131'..'\u318E' ||
+                        it.code in 0x1100..0x11FF ||
+                        it.code in 0xA960..0xA97F ||
+                        it.code in 0xD7B0..0xD7FF
+                }
             val hasLatin = any { it.isLetter() && it.code < 128 }
             val hasDigit = any(Char::isDigit)
             return hasHangul || hasLatin || hasDigit

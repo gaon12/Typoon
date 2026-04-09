@@ -103,6 +103,10 @@ object LanguageScorer {
 
     private fun Char.isEnglishLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
     private fun Char.isHangulSyllable(): Boolean = this.code in 0xAC00..0xD7AF
-    private fun Char.isHangulJamo(): Boolean = this.code in 0x3131..0x318E
+    private fun Char.isHangulJamo(): Boolean =
+        this.code in 0x3131..0x318E ||
+            this.code in 0x1100..0x11FF ||
+            this.code in 0xA960..0xA97F ||
+            this.code in 0xD7B0..0xD7FF
     private fun Char.isHangul(): Boolean = isHangulSyllable() || isHangulJamo()
 }
