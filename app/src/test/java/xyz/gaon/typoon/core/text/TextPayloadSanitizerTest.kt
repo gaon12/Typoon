@@ -27,4 +27,11 @@ class TextPayloadSanitizerTest {
 
         assertEquals("안녕", sanitized)
     }
+
+    @Test
+    fun sanitize_removesZeroWidthAndNormalizesControls() {
+        val sanitized = TextPayloadSanitizer.sanitize("a\u200B\r\nb\u0007c\r")
+
+        assertEquals("a\nb c\n", sanitized)
+    }
 }

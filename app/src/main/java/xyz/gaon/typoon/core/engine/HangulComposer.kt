@@ -1,24 +1,168 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "LoopWithTooManyJumpStatements",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+)
+
 package xyz.gaon.typoon.core.engine
 
 object HangulComposer {
-    private val CHOSUNG = listOf(
-        "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
-    )
-    private val JUNGSUNG = listOf(
-        "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
-    )
-    private val JONGSUNG = listOf(
-        "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
-    )
-    private val CANONICAL_CHOSUNG = listOf(
-        "ᄀ", "ᄁ", "ᄂ", "ᄃ", "ᄄ", "ᄅ", "ᄆ", "ᄇ", "ᄈ", "ᄉ", "ᄊ", "ᄋ", "ᄌ", "ᄍ", "ᄎ", "ᄏ", "ᄐ", "ᄑ", "ᄒ"
-    )
-    private val CANONICAL_JUNGSUNG = listOf(
-        "ᅡ", "ᅢ", "ᅣ", "ᅤ", "ᅥ", "ᅦ", "ᅧ", "ᅨ", "ᅩ", "ᅪ", "ᅫ", "ᅬ", "ᅭ", "ᅮ", "ᅯ", "ᅰ", "ᅱ", "ᅲ", "ᅳ", "ᅴ", "ᅵ"
-    )
-    private val CANONICAL_JONGSUNG = listOf(
-        "", "ᆨ", "ᆩ", "ᆪ", "ᆫ", "ᆬ", "ᆭ", "ᆮ", "ᆯ", "ᆰ", "ᆱ", "ᆲ", "ᆳ", "ᆴ", "ᆵ", "ᆶ", "ᆷ", "ᆸ", "ᆹ", "ᆺ", "ᆻ", "ᆼ", "ᆽ", "ᆾ", "ᆿ", "ᇀ", "ᇁ", "ᇂ"
-    )
+    private val CHOSUNG =
+        listOf(
+            "ㄱ",
+            "ㄲ",
+            "ㄴ",
+            "ㄷ",
+            "ㄸ",
+            "ㄹ",
+            "ㅁ",
+            "ㅂ",
+            "ㅃ",
+            "ㅅ",
+            "ㅆ",
+            "ㅇ",
+            "ㅈ",
+            "ㅉ",
+            "ㅊ",
+            "ㅋ",
+            "ㅌ",
+            "ㅍ",
+            "ㅎ",
+        )
+    private val JUNGSUNG =
+        listOf(
+            "ㅏ",
+            "ㅐ",
+            "ㅑ",
+            "ㅒ",
+            "ㅓ",
+            "ㅔ",
+            "ㅕ",
+            "ㅖ",
+            "ㅗ",
+            "ㅘ",
+            "ㅙ",
+            "ㅚ",
+            "ㅛ",
+            "ㅜ",
+            "ㅝ",
+            "ㅞ",
+            "ㅟ",
+            "ㅠ",
+            "ㅡ",
+            "ㅢ",
+            "ㅣ",
+        )
+    private val JONGSUNG =
+        listOf(
+            "",
+            "ㄱ",
+            "ㄲ",
+            "ㄳ",
+            "ㄴ",
+            "ㄵ",
+            "ㄶ",
+            "ㄷ",
+            "ㄹ",
+            "ㄺ",
+            "ㄻ",
+            "ㄼ",
+            "ㄽ",
+            "ㄾ",
+            "ㄿ",
+            "ㅀ",
+            "ㅁ",
+            "ㅂ",
+            "ㅄ",
+            "ㅅ",
+            "ㅆ",
+            "ㅇ",
+            "ㅈ",
+            "ㅊ",
+            "ㅋ",
+            "ㅌ",
+            "ㅍ",
+            "ㅎ",
+        )
+    private val CANONICAL_CHOSUNG =
+        listOf(
+            "ᄀ",
+            "ᄁ",
+            "ᄂ",
+            "ᄃ",
+            "ᄄ",
+            "ᄅ",
+            "ᄆ",
+            "ᄇ",
+            "ᄈ",
+            "ᄉ",
+            "ᄊ",
+            "ᄋ",
+            "ᄌ",
+            "ᄍ",
+            "ᄎ",
+            "ᄏ",
+            "ᄐ",
+            "ᄑ",
+            "ᄒ",
+        )
+    private val CANONICAL_JUNGSUNG =
+        listOf(
+            "ᅡ",
+            "ᅢ",
+            "ᅣ",
+            "ᅤ",
+            "ᅥ",
+            "ᅦ",
+            "ᅧ",
+            "ᅨ",
+            "ᅩ",
+            "ᅪ",
+            "ᅫ",
+            "ᅬ",
+            "ᅭ",
+            "ᅮ",
+            "ᅯ",
+            "ᅰ",
+            "ᅱ",
+            "ᅲ",
+            "ᅳ",
+            "ᅴ",
+            "ᅵ",
+        )
+    private val CANONICAL_JONGSUNG =
+        listOf(
+            "",
+            "ᆨ",
+            "ᆩ",
+            "ᆪ",
+            "ᆫ",
+            "ᆬ",
+            "ᆭ",
+            "ᆮ",
+            "ᆯ",
+            "ᆰ",
+            "ᆱ",
+            "ᆲ",
+            "ᆳ",
+            "ᆴ",
+            "ᆵ",
+            "ᆶ",
+            "ᆷ",
+            "ᆸ",
+            "ᆹ",
+            "ᆺ",
+            "ᆻ",
+            "ᆼ",
+            "ᆽ",
+            "ᆾ",
+            "ᆿ",
+            "ᇀ",
+            "ᇁ",
+            "ᇂ",
+        )
 
     private val CHOSUNG_MAP = CHOSUNG.withIndex().associate { it.value to it.index }
     private val JUNGSUNG_MAP = JUNGSUNG.withIndex().associate { it.value to it.index }
@@ -32,12 +176,30 @@ object HangulComposer {
                 .forEach { index -> put(CANONICAL_JONGSUNG[index], JONGSUNG[index]) }
         }
 
-    private val COMPLEX_VOWELS = mapOf(
-        "ㅗㅏ" to "ㅘ", "ㅗㅐ" to "ㅙ", "ㅗㅣ" to "ㅚ", "ㅜㅓ" to "ㅝ", "ㅜㅔ" to "ㅞ", "ㅜㅣ" to "ㅟ", "ㅡㅣ" to "ㅢ"
-    )
-    private val COMPLEX_CONSONANTS = mapOf(
-        "ㄱㅅ" to "ㄳ", "ㄴㅈ" to "ㄵ", "ㄴㅎ" to "ㄶ", "ㄹㄱ" to "ㄺ", "ㄹㅁ" to "ㄻ", "ㄹㅂ" to "ㄼ", "ㄹㅅ" to "ㄽ", "ㄹㅌ" to "ㄾ", "ㄹㅍ" to "ㄿ", "ㄹㅎ" to "ㅀ", "ㅂㅅ" to "ㅄ"
-    )
+    private val COMPLEX_VOWELS =
+        mapOf(
+            "ㅗㅏ" to "ㅘ",
+            "ㅗㅐ" to "ㅙ",
+            "ㅗㅣ" to "ㅚ",
+            "ㅜㅓ" to "ㅝ",
+            "ㅜㅔ" to "ㅞ",
+            "ㅜㅣ" to "ㅟ",
+            "ㅡㅣ" to "ㅢ",
+        )
+    private val COMPLEX_CONSONANTS =
+        mapOf(
+            "ㄱㅅ" to "ㄳ",
+            "ㄴㅈ" to "ㄵ",
+            "ㄴㅎ" to "ㄶ",
+            "ㄹㄱ" to "ㄺ",
+            "ㄹㅁ" to "ㄻ",
+            "ㄹㅂ" to "ㄼ",
+            "ㄹㅅ" to "ㄽ",
+            "ㄹㅌ" to "ㄾ",
+            "ㄹㅍ" to "ㄿ",
+            "ㄹㅎ" to "ㅀ",
+            "ㅂㅅ" to "ㅄ",
+        )
 
     private val REVERSE_COMPLEX_VOWELS = COMPLEX_VOWELS.entries.associate { it.value to it.key }
     private val REVERSE_COMPLEX_CONSONANTS = COMPLEX_CONSONANTS.entries.associate { it.value to it.key }
@@ -52,6 +214,7 @@ object HangulComposer {
     }
 
     fun isChosung(jamo: String): Boolean = CHOSUNG_MAP.containsKey(toCompatibilityJamo(jamo))
+
     fun isJungsung(jamo: String): Boolean = JUNGSUNG_MAP.containsKey(toCompatibilityJamo(jamo))
 
     fun compose(jamos: List<String>): String {
@@ -99,22 +262,24 @@ object HangulComposer {
 
             if (i + vSize + 1 < normalizedJamos.size) {
                 val nextChar = normalizedJamos[i + vSize + 1]
-                val isNextNextVowel = if (i + vSize + 2 < normalizedJamos.size) {
-                    val nextNextChar = normalizedJamos[i + vSize + 2]
-                    // Check if it's a direct vowel or start of a complex vowel
-                    isJungsung(nextNextChar)
-                } else {
-                    false
-                }
+                val isNextNextVowel =
+                    if (i + vSize + 2 < normalizedJamos.size) {
+                        val nextNextChar = normalizedJamos[i + vSize + 2]
+                        // Check if it's a direct vowel or start of a complex vowel
+                        isJungsung(nextNextChar)
+                    } else {
+                        false
+                    }
 
                 if (CHOSUNG_MAP.containsKey(nextChar) && !isNextNextVowel) {
                     if (i + vSize + 2 < normalizedJamos.size) {
                         val nextNextChar = normalizedJamos[i + vSize + 2]
-                        val isNextNextNextVowel = if (i + vSize + 3 < normalizedJamos.size) {
-                            isJungsung(normalizedJamos[i + vSize + 3])
-                        } else {
-                            false
-                        }
+                        val isNextNextNextVowel =
+                            if (i + vSize + 3 < normalizedJamos.size) {
+                                isJungsung(normalizedJamos[i + vSize + 3])
+                            } else {
+                                false
+                            }
 
                         val combinedC = COMPLEX_CONSONANTS[nextChar + nextNextChar]
                         if (combinedC != null && !isNextNextNextVowel) {

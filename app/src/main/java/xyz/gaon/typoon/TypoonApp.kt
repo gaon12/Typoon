@@ -4,7 +4,6 @@ import android.app.Application
 import com.google.android.gms.ads.MobileAds
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,12 +26,15 @@ class TypoonApp : Application() {
     @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
+    @Inject
+    lateinit var appPreferences: AppPreferences
+
     override fun onCreate() {
         super.onCreate()
         MobileAds.initialize(this) {}
         applicationScope.launch {
-            val appLanguage = AppPreferences(this@TypoonApp).settings.first().appLanguage
-            withContext(Dispatchers.Main.immediate) {
+            val appLanguage = appPreferences.settings.first().appLanguage
+            withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
                 AppLocaleManager.apply(appLanguage)
             }
         }

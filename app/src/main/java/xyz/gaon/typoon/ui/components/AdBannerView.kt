@@ -1,13 +1,14 @@
 package xyz.gaon.typoon.ui.components
 
-import android.content.res.Configuration
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -15,8 +16,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
@@ -26,14 +25,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
-import xyz.gaon.typoon.R
 import xyz.gaon.typoon.BuildConfig
+import xyz.gaon.typoon.R
 
 private const val BANNER_LINK = "https://github.com/sponsors/gaon12"
 
@@ -59,15 +59,21 @@ fun AdBannerView(
     val configuration = LocalConfiguration.current
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val currentOnProbableAdBlockDetected by rememberUpdatedState(onProbableAdBlockDetected)
-    var isAdLoaded by remember(configuration.orientation, configuration.screenWidthDp) { mutableStateOf(false) }
-    var hasReportedProbableAdBlock by remember(configuration.orientation, configuration.screenWidthDp) { mutableStateOf(false) }
+    var isAdLoaded by
+        remember(configuration.orientation, configuration.screenWidthDp) {
+            mutableStateOf(false)
+        }
+    var hasReportedProbableAdBlock by
+        remember(configuration.orientation, configuration.screenWidthDp) {
+            mutableStateOf(false)
+        }
     val bannerBitmap =
         remember(isDarkTheme, configuration.locales.toLanguageTags()) {
             val overrideConfig =
                 Configuration(context.resources.configuration).apply {
                     uiMode =
                         (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-                            if (isDarkTheme) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+                        if (isDarkTheme) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
                 }
             val themedContext = context.createConfigurationContext(overrideConfig)
             val rawBitmap =
@@ -148,33 +154,34 @@ private fun FallbackBannerImage(
 private fun trimTransparentEdges(source: Bitmap): Bitmap {
     val width = source.width
     val height = source.height
-    if (width <= 0 || height <= 0) return source
 
-    val row = IntArray(width)
-    var top = 0
-    while (top < height) {
-        source.getPixels(row, 0, width, 0, top, width, 1)
-        if (row.any { (it ushr 24) != 0 }) break
-        top++
-    }
+    return if (width <= 0 || height <= 0) {
+        source
+    } else {
+        val row = IntArray(width)
+        var top = 0
+        while (top < height) {
+            source.getPixels(row, 0, width, 0, top, width, 1)
+            if (row.any { (it ushr 24) != 0 }) break
+            top++
+        }
 
-    var bottom = height - 1
-    while (bottom >= top) {
-        source.getPixels(row, 0, width, 0, bottom, width, 1)
-        if (row.any { (it ushr 24) != 0 }) break
-        bottom--
-    }
+        var bottom = height - 1
+        while (bottom >= top) {
+            source.getPixels(row, 0, width, 0, bottom, width, 1)
+            if (row.any { (it ushr 24) != 0 }) break
+            bottom--
+        }
 
-    if (top == 0 && bottom == height - 1) {
-        return source
+        val shouldKeepSource = (top == 0 && bottom == height - 1) || top > bottom
+        if (shouldKeepSource) {
+            source
+        } else {
+            Bitmap.createBitmap(source, 0, top, width, bottom - top + 1).also { cropped ->
+                if (cropped != source) {
+                    source.recycle()
+                }
+            }
+        }
     }
-    if (top > bottom) {
-        return source
-    }
-
-    val cropped = Bitmap.createBitmap(source, 0, top, width, bottom - top + 1)
-    if (cropped != source) {
-        source.recycle()
-    }
-    return cropped
 }

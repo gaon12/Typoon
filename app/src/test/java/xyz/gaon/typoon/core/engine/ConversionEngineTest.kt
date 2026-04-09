@@ -1,6 +1,7 @@
 package xyz.gaon.typoon.core.engine
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.text.Normalizer
@@ -133,12 +134,13 @@ class ConversionEngineTest {
 
     @Test
     fun `ENG_TO_KOR - Complex vowels`() {
-        val inputs = mapOf(
-            "ghk" to "화",
-            "rhk" to "과",
-            "dnj" to "워",
-            "dml" to "의"
-        )
+        val inputs =
+            mapOf(
+                "ghk" to "화",
+                "rhk" to "과",
+                "dnj" to "워",
+                "dml" to "의",
+            )
         inputs.forEach { (input, expected) ->
             val result = engine.convertForced(input, ConversionDirection.ENG_TO_KOR)
             assertEquals("Failed for $input", expected, result.resultText)
@@ -147,12 +149,13 @@ class ConversionEngineTest {
 
     @Test
     fun `ENG_TO_KOR - Complex consonants in syllables`() {
-        val inputs = mapOf(
-            "rkqt" to "값",
-            "dksw" to "앉",
-            "aksg" to "많",
-            "ekfr" to "닭"
-        )
+        val inputs =
+            mapOf(
+                "rkqt" to "값",
+                "dksw" to "앉",
+                "aksg" to "많",
+                "ekfr" to "닭",
+            )
         inputs.forEach { (input, expected) ->
             val result = engine.convertForced(input, ConversionDirection.ENG_TO_KOR)
             assertEquals("Failed for $input", expected, result.resultText)
@@ -209,5 +212,25 @@ class ConversionEngineTest {
         val direction = engine.resolveReverseDirection(input, ConversionDirection.UNKNOWN)
 
         assertEquals(ConversionDirection.KOR_TO_ENG, direction)
+    }
+
+    @Test
+    fun `setExceptions preserves configured tokens during conversion`() {
+        engine.setExceptions(setOf("dkssudgktpdy"))
+
+        val result = engine.convert("dkssudgktpdy")
+
+        assertEquals("dkssudgktpdy", result.resultText)
+    }
+
+    @Test
+    fun `setFeedbackAdjustment lowers confidence without changing result text`() {
+        val baseline = engine.convert("dkssudgktpdy")
+        engine.setFeedbackAdjustment(1f)
+
+        val adjusted = engine.convert("dkssudgktpdy")
+
+        assertEquals(baseline.resultText, adjusted.resultText)
+        assertTrue(adjusted.confidence < baseline.confidence)
     }
 }

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import xyz.gaon.typoon.R
 import xyz.gaon.typoon.core.clipboard.ClipboardHelper
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
@@ -25,9 +25,10 @@ import xyz.gaon.typoon.core.data.db.ConversionEntity
 import xyz.gaon.typoon.core.data.model.ConversionStats
 import xyz.gaon.typoon.core.data.repository.HistoryRepository
 import xyz.gaon.typoon.core.di.AppSessionState
+import xyz.gaon.typoon.core.di.ConversionDispatcher
 import xyz.gaon.typoon.core.di.PendingConversionHolder
-import xyz.gaon.typoon.core.engine.ConversionEngine
 import xyz.gaon.typoon.core.engine.ConversionDirection
+import xyz.gaon.typoon.core.engine.ConversionEngine
 import xyz.gaon.typoon.core.engine.ConversionResult
 import xyz.gaon.typoon.core.text.TextPayloadSanitizer
 import javax.inject.Inject
@@ -51,7 +52,6 @@ sealed interface HomeUiEvent {
 }
 
 @HiltViewModel
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel
     @Inject
     constructor(
@@ -61,6 +61,7 @@ class HomeViewModel
         private val appPreferences: AppPreferences,
         private val appSessionState: AppSessionState,
         private val pendingHolder: PendingConversionHolder,
+        @param:ConversionDispatcher private val conversionDispatcher: CoroutineDispatcher,
         @param:ApplicationContext private val appContext: Context,
     ) : ViewModel() {
         private val _inputText = MutableStateFlow("")
@@ -78,20 +79,6 @@ class HomeViewModel
             historyRepository
                 .getRecentHistory(5)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-        private val _searchQuery = MutableStateFlow("")
-        val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-        /** 검색어가 있으면 검색 결과, 없으면 최근 기록 10개 */
-        val displayHistory: StateFlow<List<ConversionEntity>> =
-            _searchQuery
-                .flatMapLatest { query ->
-                    if (query.isBlank()) {
-                        historyRepository.getRecentHistory(5)
-                    } else {
-                        historyRepository.searchHistory(query)
-                    }
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val settings: StateFlow<AppSettings> =
             appPreferences.settings
@@ -113,10 +100,6 @@ class HomeViewModel
 
         companion object {
             const val MAX_INPUT_LENGTH = 1000
-        }
-
-        fun onSearchQueryChange(query: String) {
-            _searchQuery.value = query
         }
 
         fun onClearInput() {
@@ -224,37 +207,38 @@ class HomeViewModel
                     .sanitize(clipboardHelper.readText()?.trim())
                     .take(MAX_INPUT_LENGTH)
 
-            if (clipboardText.isBlank() || clipboardText == lastSuggestedClipboardText) return
-            if (!clipboardText.isSuspiciousTypoCandidate()) return
-
-            val conversion = conversionEngine.convert(clipboardText)
-            val suggestedText = conversion.resultText.trim()
-            if (!shouldOfferSuggestion(clipboardText, suggestedText, conversion.confidence)) return
-
-            _clipboardSuggestion.value =
-                ClipboardSuggestionState(
-                    originalText = clipboardText,
-                    suggestedText = suggestedText,
-                    confidence = conversion.confidence,
-                )
-            lastSuggestedClipboardText = clipboardText
+            val isEligibleClipboardText =
+                clipboardText.isNotBlank() &&
+                    clipboardText != lastSuggestedClipboardText &&
+                    clipboardText.isSuspiciousTypoCandidate()
+            if (isEligibleClipboardText) {
+                val conversion = runConversion(clipboardText)
+                val suggestedText = conversion.resultText.trim()
+                if (shouldOfferSuggestion(clipboardText, suggestedText, conversion.confidence)) {
+                    _clipboardSuggestion.value =
+                        ClipboardSuggestionState(
+                            originalText = clipboardText,
+                            suggestedText = suggestedText,
+                            confidence = conversion.confidence,
+                        )
+                    lastSuggestedClipboardText = clipboardText
+                }
+            }
         }
 
         private fun shouldOfferSuggestion(
             original: String,
             suggested: String,
             confidence: Float,
-        ): Boolean {
-            if (confidence < 0.55f) return false
-            if (suggested.isBlank()) return false
-            if (original == suggested) return false
-            val normalize = { text: String -> text.filter(Char::isLetterOrDigit).lowercase() }
-            return normalize(original) != normalize(suggested)
-        }
+        ): Boolean =
+            confidence >= 0.55f &&
+                suggested.isNotBlank() &&
+                original != suggested &&
+                normalizedSuggestionText(original) != normalizedSuggestionText(suggested)
+
+        private fun normalizedSuggestionText(text: String): String = text.filter(Char::isLetterOrDigit).lowercase()
 
         private fun String.isSuspiciousTypoCandidate(): Boolean {
-            if (length !in 2..180) return false
-            if (contains('\n')) return false
             val hasHangul =
                 any {
                     it in '\uAC00'..'\uD7A3' ||
@@ -265,14 +249,15 @@ class HomeViewModel
                 }
             val hasLatin = any { it.isLetter() && it.code < 128 }
             val hasDigit = any(Char::isDigit)
-            return hasHangul || hasLatin || hasDigit
+            val isLengthAllowed = length in 2..180
+            return isLengthAllowed && !contains('\n') && (hasHangul || hasLatin || hasDigit)
         }
 
         private suspend fun convertCurrentInput(): Boolean {
             val text = _inputText.value.trim()
             if (text.isBlank()) return false
 
-            val result = conversionEngine.convert(text)
+            val result = runConversion(text)
             pendingHolder.sourceText = text
             pendingHolder.result = result
             pendingHolder.isFromShare = false
@@ -298,6 +283,11 @@ class HomeViewModel
             }
             return true
         }
+
+        private suspend fun runConversion(text: String): ConversionResult =
+            withContext(conversionDispatcher) {
+                conversionEngine.convert(text)
+            }
 
         fun copyHistoryResult(entity: ConversionEntity) {
             clipboardHelper.writeText(entity.resultText)

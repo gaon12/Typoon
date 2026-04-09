@@ -4,21 +4,23 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
 import xyz.gaon.typoon.core.data.db.ConversionEntity
 import xyz.gaon.typoon.core.data.repository.HistoryRepository
+import xyz.gaon.typoon.core.di.ConversionDispatcher
 import xyz.gaon.typoon.core.di.PendingConversionHolder
 import xyz.gaon.typoon.core.engine.ConversionEngine
 import xyz.gaon.typoon.core.text.TextPayloadSanitizer
 import xyz.gaon.typoon.feature.share.ShareResultSheet
 import xyz.gaon.typoon.ui.components.ConversionLoadingContent
+import xyz.gaon.typoon.ui.system.configureTypoonEdgeToEdge
 import xyz.gaon.typoon.ui.theme.TypoonTheme
 import javax.inject.Inject
 
@@ -32,10 +34,14 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     @Inject lateinit var appPreferences: AppPreferences
 
+    @Inject @ConversionDispatcher
+    lateinit var conversionDispatcher: CoroutineDispatcher
+
     private val isProcessing = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        configureTypoonEdgeToEdge()
 
         if (intent?.action != Intent.ACTION_SEND || intent?.type != "text/plain") {
             finish()
@@ -53,7 +59,7 @@ class ShareReceiveActivity : AppCompatActivity() {
                 if (isProcessing.value) {
                     ConversionLoadingContent()
                 } else {
-                    // BottomSheet 팝업으로 표시 — enableEdgeToEdge 미적용 (투명 배경 유지)
+                    // 투명 윈도우 위에 BottomSheet를 띄우되 시스템 바 인셋은 Compose가 처리한다.
                     ShareResultSheet(
                         onDismiss = { finish() },
                     )
@@ -64,7 +70,7 @@ class ShareReceiveActivity : AppCompatActivity() {
         lifecycleScope.launch {
             runCatching {
                 val result =
-                    withContext(Dispatchers.Default) {
+                    withContext(conversionDispatcher) {
                         conversionEngine.convert(sharedText)
                     }
 

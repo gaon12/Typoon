@@ -5,21 +5,23 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
 import xyz.gaon.typoon.core.data.db.ConversionEntity
 import xyz.gaon.typoon.core.data.repository.HistoryRepository
+import xyz.gaon.typoon.core.di.ConversionDispatcher
 import xyz.gaon.typoon.core.di.PendingConversionHolder
 import xyz.gaon.typoon.core.engine.ConversionEngine
 import xyz.gaon.typoon.core.text.TextPayloadSanitizer
 import xyz.gaon.typoon.feature.processtext.ProcessTextSheet
 import xyz.gaon.typoon.ui.components.ConversionLoadingContent
+import xyz.gaon.typoon.ui.system.configureTypoonEdgeToEdge
 import xyz.gaon.typoon.ui.theme.TypoonTheme
 import javax.inject.Inject
 
@@ -33,10 +35,14 @@ class ProcessTextActivity : AppCompatActivity() {
 
     @Inject lateinit var appPreferences: AppPreferences
 
+    @Inject @ConversionDispatcher
+    lateinit var conversionDispatcher: CoroutineDispatcher
+
     private val isProcessing = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        configureTypoonEdgeToEdge()
 
         if (intent.action != Intent.ACTION_PROCESS_TEXT || intent.type != "text/plain") {
             finish()
@@ -79,7 +85,7 @@ class ProcessTextActivity : AppCompatActivity() {
         lifecycleScope.launch {
             runCatching {
                 val result =
-                    withContext(Dispatchers.Default) {
+                    withContext(conversionDispatcher) {
                         conversionEngine.convert(selectedText)
                     }
                 pendingHolder.sourceText = selectedText

@@ -1,6 +1,7 @@
 package xyz.gaon.typoon.core.data.repository
 
 internal object HistorySearchPolicy {
+    private const val MAX_QUERY_LENGTH = 64
     private val ftsTokenRegex = Regex("[0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ]+")
     private val choseongOnlyRegex = Regex("^[ㄱ-ㅎ\\s]+$")
     private val choseongChars =
@@ -31,9 +32,15 @@ internal object HistorySearchPolicy {
             .replace(Regex("[\\p{Cntrl}]"), " ")
             .trim()
             .replace(Regex("\\s+"), " ")
+            .take(MAX_QUERY_LENGTH)
 
     fun buildSafeFtsPrefixQuery(normalized: String): String? {
-        val tokens = ftsTokenRegex.findAll(normalized).map { it.value }.filter { it.isNotBlank() }.toList()
+        val tokens =
+            ftsTokenRegex
+                .findAll(normalized)
+                .map { it.value }
+                .filter { it.isNotBlank() }
+                .toList()
         if (tokens.isEmpty()) return null
         return tokens.joinToString(" AND ") { token -> "\"${token.replace("\"", "")}\"*" }
     }

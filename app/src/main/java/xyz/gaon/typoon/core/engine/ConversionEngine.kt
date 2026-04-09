@@ -1,6 +1,7 @@
 package xyz.gaon.typoon.core.engine
 
 import java.text.Normalizer
+import java.util.concurrent.atomic.AtomicReference
 
 data class ConversionResult(
     val resultText: String,
@@ -22,9 +23,13 @@ enum class ConversionDirection {
     }
 }
 
+private data class ConversionRuntimeConfig(
+    val exceptions: Set<String> = emptySet(),
+    val feedbackPenalty: Float = 0f,
+)
+
 class ConversionEngine {
-    private var exceptions: Set<String> = emptySet()
-    private var feedbackPenalty: Float = 0f
+    private val runtimeConfig = AtomicReference(ConversionRuntimeConfig())
 
     private enum class SegmentScript {
         ENG,
@@ -38,116 +43,36 @@ class ConversionEngine {
     )
 
     fun setExceptions(words: Set<String>) {
-        exceptions = words.map { normalizeForProcessing(it).trim() }.toSet()
+        val normalizedWords = words.map { normalizeForProcessing(it).trim() }.toSet()
+        runtimeConfig.updateAndGet { config -> config.copy(exceptions = normalizedWords) }
     }
 
     fun setFeedbackAdjustment(negativeFeedbackRate: Float) {
-        feedbackPenalty = (negativeFeedbackRate * 0.3f).coerceIn(0f, 0.3f)
+        val penalty = (negativeFeedbackRate * 0.3f).coerceIn(0f, 0.3f)
+        runtimeConfig.updateAndGet { config -> config.copy(feedbackPenalty = penalty) }
     }
 
     fun convert(input: String): ConversionResult {
+        val config = runtimeConfig.get()
         val normalizedInput = normalizeForProcessing(input)
-        if (normalizedInput.isBlank()) return ConversionResult(normalizedInput, ConversionDirection.UNKNOWN, 0.0f)
-
-        val hasEng = normalizedInput.any { it.isEnglishLetter() }
-        val hasKor = normalizedInput.any { it.isHangul() }
-        if (hasEng && hasKor) {
-            return convertMixedInput(normalizedInput)
+        if (normalizedInput.isBlank()) {
+            return ConversionResult(normalizedInput, ConversionDirection.UNKNOWN, 0.0f)
         }
 
-        val direction = inferDirection(normalizedInput)
-        val result = convertForced(normalizedInput, direction)
-
-        val words = result.resultText.split(Regex("\\s+")).filter { it.length >= 2 }
-        if (words.isNotEmpty()) {
-            val commonSet = if (direction == ConversionDirection.ENG_TO_KOR) {
-                ConversionConstants.COMMON_KOR_WORDS
+        val baseResult =
+            if (normalizedInput.hasMixedScripts()) {
+                convertMixedInput(normalizedInput, config)
             } else {
-                ConversionConstants.COMMON_ENG_WORDS
+                convertForced(normalizedInput, inferDirection(normalizedInput), config)
             }
-            val matchCount = words.count { it in commonSet }
-            if (matchCount.toFloat() / words.size >= 0.5f) {
-                return result.copy(confidence = (result.confidence + 0.1f).coerceAtMost(1.0f))
-            }
-        }
 
-        return result
+        return boostConfidenceIfCommonWords(baseResult)
     }
 
-    private fun convertMixedInput(input: String): ConversionResult {
-        val segments = splitIntoScriptSegments(input)
-        val output = StringBuilder()
-        var engToKorCount = 0
-        var korToEngCount = 0
-
-        segments.forEach { segment ->
-            when (segment.script) {
-                SegmentScript.ENG -> {
-                    val converted = convertEnglishSegmentSmart(segment.text)
-                    if (converted != segment.text) {
-                        engToKorCount++
-                    }
-                    output.append(converted)
-                }
-
-                SegmentScript.KOR -> {
-                    val converted = convertKoreanSegmentSmart(segment.text)
-                    if (converted != segment.text) {
-                        korToEngCount++
-                    }
-                    output.append(converted)
-                }
-
-                SegmentScript.OTHER -> output.append(segment.text)
-            }
-        }
-
-        val direction = when {
-            engToKorCount > 0 && korToEngCount == 0 -> ConversionDirection.ENG_TO_KOR
-            korToEngCount > 0 && engToKorCount == 0 -> ConversionDirection.KOR_TO_ENG
-            engToKorCount > korToEngCount -> ConversionDirection.ENG_TO_KOR
-            korToEngCount > engToKorCount -> ConversionDirection.KOR_TO_ENG
-            else -> ConversionDirection.UNKNOWN
-        }
-        val confidence = when {
-            (engToKorCount + korToEngCount) == 0 -> 0.25f
-            direction == ConversionDirection.UNKNOWN -> 0.58f
-            else -> 0.74f
-        }
-
-        return ConversionResult(
-            resultText = output.toString(),
-            direction = direction,
-            confidence = (confidence - feedbackPenalty * 0.5f).coerceIn(0.1f, 1.0f),
-        )
-    }
-
-    fun convertForced(input: String, direction: ConversionDirection): ConversionResult {
-        val normalizedInput = normalizeForProcessing(input)
-        if (direction == ConversionDirection.UNKNOWN) return ConversionResult(normalizedInput, direction, 0.0f)
-
-        val confidence = LanguageScorer.calculateConfidence(normalizedInput, direction, feedbackPenalty)
-        val sb = StringBuilder()
-        val currentToken = StringBuilder()
-
-        for (char in normalizedInput) {
-            if (char.isLetter()) {
-                currentToken.append(char)
-            } else {
-                if (currentToken.isNotEmpty()) {
-                    sb.append(processToken(currentToken.toString(), direction))
-                    currentToken.clear()
-                }
-                sb.append(char)
-            }
-        }
-
-        if (currentToken.isNotEmpty()) {
-            sb.append(processToken(currentToken.toString(), direction))
-        }
-
-        return ConversionResult(sb.toString(), direction, confidence)
-    }
+    fun convertForced(
+        input: String,
+        direction: ConversionDirection,
+    ): ConversionResult = convertForced(input, direction, runtimeConfig.get())
 
     fun resolveReverseDirection(
         sourceText: String,
@@ -159,39 +84,160 @@ class ConversionEngine {
             ConversionDirection.UNKNOWN -> inferReverseDirectionForUnknown(sourceText)
         }
 
-    private fun processToken(token: String, direction: ConversionDirection): String {
-        if (token in exceptions) return token
-        return if (direction == ConversionDirection.ENG_TO_KOR) {
+    private fun boostConfidenceIfCommonWords(result: ConversionResult): ConversionResult {
+        val words = result.resultText.split(Regex("\\s+")).filter { it.length >= 2 }
+        if (words.isEmpty()) return result
+
+        val commonSet =
+            if (result.direction == ConversionDirection.ENG_TO_KOR) {
+                ConversionConstants.COMMON_KOR_WORDS
+            } else {
+                ConversionConstants.COMMON_ENG_WORDS
+            }
+        val matchRatio = words.count { it in commonSet }.toFloat() / words.size
+        return if (matchRatio >= 0.5f) {
+            result.copy(confidence = (result.confidence + 0.1f).coerceAtMost(1.0f))
+        } else {
+            result
+        }
+    }
+
+    private fun convertMixedInput(
+        input: String,
+        config: ConversionRuntimeConfig,
+    ): ConversionResult {
+        val segments = splitIntoScriptSegments(input)
+        val output = StringBuilder()
+        var engToKorCount = 0
+        var korToEngCount = 0
+
+        segments.forEach { segment ->
+            when (segment.script) {
+                SegmentScript.ENG -> {
+                    val converted = convertEnglishSegmentSmart(segment.text, config.exceptions)
+                    if (converted != segment.text) {
+                        engToKorCount++
+                    }
+                    output.append(converted)
+                }
+
+                SegmentScript.KOR -> {
+                    val converted = convertKoreanSegmentSmart(segment.text, config.exceptions)
+                    if (converted != segment.text) {
+                        korToEngCount++
+                    }
+                    output.append(converted)
+                }
+
+                SegmentScript.OTHER -> output.append(segment.text)
+            }
+        }
+
+        val direction = determineMixedDirection(engToKorCount, korToEngCount)
+        val confidence = determineMixedConfidence(direction, engToKorCount, korToEngCount)
+        return ConversionResult(
+            resultText = output.toString(),
+            direction = direction,
+            confidence = (confidence - config.feedbackPenalty * 0.5f).coerceIn(0.1f, 1.0f),
+        )
+    }
+
+    private fun determineMixedDirection(
+        engToKorCount: Int,
+        korToEngCount: Int,
+    ): ConversionDirection =
+        when {
+            engToKorCount > 0 && korToEngCount == 0 -> ConversionDirection.ENG_TO_KOR
+            korToEngCount > 0 && engToKorCount == 0 -> ConversionDirection.KOR_TO_ENG
+            engToKorCount > korToEngCount -> ConversionDirection.ENG_TO_KOR
+            korToEngCount > engToKorCount -> ConversionDirection.KOR_TO_ENG
+            else -> ConversionDirection.UNKNOWN
+        }
+
+    private fun determineMixedConfidence(
+        direction: ConversionDirection,
+        engToKorCount: Int,
+        korToEngCount: Int,
+    ): Float =
+        when {
+            (engToKorCount + korToEngCount) == 0 -> 0.25f
+            direction == ConversionDirection.UNKNOWN -> 0.58f
+            else -> 0.74f
+        }
+
+    private fun convertForced(
+        input: String,
+        direction: ConversionDirection,
+        config: ConversionRuntimeConfig,
+    ): ConversionResult {
+        val normalizedInput = normalizeForProcessing(input)
+        if (direction == ConversionDirection.UNKNOWN) {
+            return ConversionResult(normalizedInput, direction, 0.0f)
+        }
+
+        val confidence = LanguageScorer.calculateConfidence(normalizedInput, direction, config.feedbackPenalty)
+        val sb = StringBuilder()
+        val currentToken = StringBuilder()
+
+        for (char in normalizedInput) {
+            if (char.isLetter()) {
+                currentToken.append(char)
+            } else {
+                flushCurrentToken(currentToken, sb, direction, config.exceptions)
+                sb.append(char)
+            }
+        }
+        flushCurrentToken(currentToken, sb, direction, config.exceptions)
+
+        return ConversionResult(sb.toString(), direction, confidence)
+    }
+
+    private fun flushCurrentToken(
+        currentToken: StringBuilder,
+        output: StringBuilder,
+        direction: ConversionDirection,
+        exceptions: Set<String>,
+    ) {
+        if (currentToken.isEmpty()) return
+        output.append(processToken(currentToken.toString(), direction, exceptions))
+        currentToken.clear()
+    }
+
+    private fun processToken(
+        token: String,
+        direction: ConversionDirection,
+        exceptions: Set<String>,
+    ): String =
+        if (token in exceptions) {
+            token
+        } else if (direction == ConversionDirection.ENG_TO_KOR) {
             translateEngToKor(token)
         } else {
             translateKorToEng(token)
         }
-    }
 
     private fun inferDirection(input: String): ConversionDirection {
         val engCount = input.count { it.isEnglishLetter() }
         val korCount = input.count { it.isHangul() }
-
         val totalLetters = engCount + korCount
         if (totalLetters == 0) return ConversionDirection.UNKNOWN
 
         val engRatio = engCount.toFloat() / totalLetters
         val korRatio = korCount.toFloat() / totalLetters
-
-        if (LanguageScorer.looksLikeUrlOrEmail(input)) {
-            return when {
+        return if (LanguageScorer.looksLikeUrlOrEmail(input)) {
+            when {
                 engRatio > 0.9f -> ConversionDirection.UNKNOWN
                 engCount > korCount -> ConversionDirection.ENG_TO_KOR
                 else -> ConversionDirection.KOR_TO_ENG
             }
-        }
-
-        return when {
-            engRatio > 0.8f -> ConversionDirection.ENG_TO_KOR
-            korRatio > 0.8f -> ConversionDirection.KOR_TO_ENG
-            engCount > korCount -> ConversionDirection.ENG_TO_KOR
-            korCount > engCount -> ConversionDirection.KOR_TO_ENG
-            else -> ConversionDirection.UNKNOWN
+        } else {
+            when {
+                engRatio > 0.8f -> ConversionDirection.ENG_TO_KOR
+                korRatio > 0.8f -> ConversionDirection.KOR_TO_ENG
+                engCount > korCount -> ConversionDirection.ENG_TO_KOR
+                korCount > engCount -> ConversionDirection.KOR_TO_ENG
+                else -> ConversionDirection.UNKNOWN
+            }
         }
     }
 
@@ -234,49 +280,35 @@ class ConversionEngine {
         return segments
     }
 
-    private fun charScript(char: Char): SegmentScript = when {
-        char.isEnglishLetter() -> SegmentScript.ENG
-        char.isHangul() -> SegmentScript.KOR
-        else -> SegmentScript.OTHER
-    }
+    private fun charScript(char: Char): SegmentScript =
+        when {
+            char.isEnglishLetter() -> SegmentScript.ENG
+            char.isHangul() -> SegmentScript.KOR
+            else -> SegmentScript.OTHER
+        }
 
-    private fun convertEnglishSegmentSmart(segment: String): String {
+    private fun convertEnglishSegmentSmart(
+        segment: String,
+        exceptions: Set<String>,
+    ): String {
         if (segment in exceptions || shouldPreserveEnglishSegment(segment)) return segment
 
         val converted = translateEngToKor(segment)
         val originalScore = LanguageScorer.englishTokenScore(segment)
         val convertedScore = LanguageScorer.koreanTokenScore(converted)
-
         return if (convertedScore >= originalScore + 0.08f) converted else segment
     }
 
-    private fun convertKoreanSegmentSmart(segment: String): String {
+    private fun convertKoreanSegmentSmart(
+        segment: String,
+        exceptions: Set<String>,
+    ): String {
         if (segment in exceptions || shouldPreserveKoreanSegment(segment)) return segment
 
         val converted = translateKorToEng(segment)
         val originalScore = LanguageScorer.koreanTokenScore(segment)
         val convertedScore = LanguageScorer.englishTokenScore(converted)
-
         return if (convertedScore >= originalScore + 0.08f) converted else segment
-    }
-
-    private fun shouldPreserveEnglishSegment(segment: String): Boolean {
-        val lower = segment.lowercase()
-        val englishLetterCount = segment.count { it.isEnglishLetter() }
-        if (englishLetterCount == 0) return true
-        if (LanguageScorer.looksLikeUrlOrEmail(segment)) return true
-        if (lower in ConversionConstants.COMMON_ENG_WORDS) return true
-        if (lower in setOf("a", "i")) return true
-        if (segment.length <= 2 && segment.any { it.isUpperCase() }) return true
-        if (segment.length <= 4 && segment.all { it.isUpperCase() }) return true
-        return false
-    }
-
-    private fun shouldPreserveKoreanSegment(segment: String): Boolean {
-        if (segment in ConversionConstants.COMMON_KOR_WORDS) return true
-        val syllableCount = segment.count { it.isHangulSyllable() }
-        val jamoCount = segment.count { it.isHangulJamo() }
-        return syllableCount == 1 && jamoCount == 0
     }
 
     private fun translateEngToKor(input: String): String {
@@ -310,14 +342,14 @@ class ConversionEngine {
                 val jamos = HangulComposer.getJamosFromSyllable(char)
                 for (jamo in jamos) {
                     val decomposed = HangulComposer.decomposeJamo(jamo)
-                    for (d in decomposed) {
-                        sb.append(KeyboardMapper.mapKorToEng(d) ?: d)
+                    for (decomposedChar in decomposed) {
+                        sb.append(KeyboardMapper.mapKorToEng(decomposedChar) ?: decomposedChar)
                     }
                 }
             } else if (char.isHangulJamo()) {
                 val decomposed = HangulComposer.decomposeJamo(char.toString())
-                for (d in decomposed) {
-                    sb.append(KeyboardMapper.mapKorToEng(d) ?: d)
+                for (decomposedChar in decomposed) {
+                    sb.append(KeyboardMapper.mapKorToEng(decomposedChar) ?: decomposedChar)
                 }
             } else {
                 sb.append(char)
@@ -325,15 +357,45 @@ class ConversionEngine {
         }
         return sb.toString()
     }
-
-    private fun normalizeForProcessing(input: String): String = Normalizer.normalize(input, Normalizer.Form.NFC)
-
-    private fun Char.isEnglishLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
-    private fun Char.isHangulSyllable(): Boolean = this.code in 0xAC00..0xD7AF
-    private fun Char.isHangulJamo(): Boolean =
-        this.code in 0x3131..0x318E ||
-            this.code in 0x1100..0x11FF ||
-            this.code in 0xA960..0xA97F ||
-            this.code in 0xD7B0..0xD7FF
-    private fun Char.isHangul(): Boolean = isHangulSyllable() || isHangulJamo()
 }
+
+private fun shouldPreserveEnglishSegment(segment: String): Boolean {
+    val lower = segment.lowercase()
+    val hasNoEnglishLetters = segment.none { it.isEnglishLetter() }
+    val isKnownEnglishWord = lower in ConversionConstants.COMMON_ENG_WORDS || lower in setOf("a", "i")
+    val isUppercaseShortcut =
+        (segment.length <= 2 && segment.any { it.isUpperCase() }) ||
+            (segment.length <= 4 && segment.all { it.isUpperCase() })
+    return (
+        hasNoEnglishLetters ||
+            LanguageScorer.looksLikeUrlOrEmail(segment) ||
+            isKnownEnglishWord ||
+            isUppercaseShortcut
+    )
+}
+
+private fun shouldPreserveKoreanSegment(segment: String): Boolean {
+    val syllableCount = segment.count { it.isHangulSyllable() }
+    val jamoCount = segment.count { it.isHangulJamo() }
+    return segment in ConversionConstants.COMMON_KOR_WORDS || (syllableCount == 1 && jamoCount == 0)
+}
+
+private fun normalizeForProcessing(input: String): String = Normalizer.normalize(input, Normalizer.Form.NFC)
+
+private fun String.hasMixedScripts(): Boolean {
+    val hasEng = any { it.isEnglishLetter() }
+    val hasKor = any { it.isHangul() }
+    return hasEng && hasKor
+}
+
+private fun Char.isEnglishLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
+
+private fun Char.isHangulSyllable(): Boolean = this.code in 0xAC00..0xD7AF
+
+private fun Char.isHangulJamo(): Boolean =
+    this.code in 0x3131..0x318E ||
+        this.code in 0x1100..0x11FF ||
+        this.code in 0xA960..0xA97F ||
+        this.code in 0xD7B0..0xD7FF
+
+private fun Char.isHangul(): Boolean = isHangulSyllable() || isHangulJamo()

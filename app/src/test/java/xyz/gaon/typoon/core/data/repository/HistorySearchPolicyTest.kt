@@ -13,6 +13,13 @@ class HistorySearchPolicyTest {
     }
 
     @Test
+    fun normalizeUserQuery_capsLength() {
+        val normalized = HistorySearchPolicy.normalizeUserQuery("a".repeat(100))
+
+        assertEquals(64, normalized.length)
+    }
+
+    @Test
     fun buildSafeFtsPrefixQuery_buildsQuotedPrefixTerms() {
         val query = HistorySearchPolicy.buildSafeFtsPrefixQuery("apple 한글")
         assertEquals("\"apple\"* AND \"한글\"*", query)

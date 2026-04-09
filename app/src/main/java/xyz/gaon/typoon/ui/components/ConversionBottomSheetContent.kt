@@ -94,8 +94,10 @@ fun ConversionBottomSheetContent(
                     Text(
                         text =
                             when (result?.direction) {
-                                ConversionDirection.ENG_TO_KOR -> stringResource(R.string.bottom_sheet_direction_eng_to_kor)
-                                ConversionDirection.KOR_TO_ENG -> stringResource(R.string.bottom_sheet_direction_kor_to_eng)
+                                ConversionDirection.ENG_TO_KOR ->
+                                    stringResource(R.string.bottom_sheet_direction_eng_to_kor)
+                                ConversionDirection.KOR_TO_ENG ->
+                                    stringResource(R.string.bottom_sheet_direction_kor_to_eng)
                                 else -> stringResource(R.string.bottom_sheet_direction_unknown)
                             },
                         style = MaterialTheme.typography.labelMedium,

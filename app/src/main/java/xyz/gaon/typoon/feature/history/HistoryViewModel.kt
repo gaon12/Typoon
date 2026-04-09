@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,11 +42,6 @@ class HistoryViewModel
         private val appPreferences: AppPreferences,
         private val pendingHolder: PendingConversionHolder,
     ) : ViewModel() {
-        val allHistory: StateFlow<List<ConversionEntity>> =
-            historyRepository
-                .getRecentHistory(200)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
         val settings: StateFlow<AppSettings> =
             appPreferences.settings
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
@@ -54,6 +51,8 @@ class HistoryViewModel
 
         val filteredHistory: StateFlow<List<ConversionEntity>> =
             _searchQuery
+                .debounce(150)
+                .distinctUntilChanged()
                 .flatMapLatest { query ->
                     if (query.isBlank()) {
                         historyRepository.getRecentHistory(200)

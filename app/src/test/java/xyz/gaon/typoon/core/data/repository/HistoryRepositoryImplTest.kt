@@ -58,12 +58,12 @@ class HistoryRepositoryImplTest {
         runTest {
             val matching = sampleEntity(id = 1L, source = "한글 테스트")
             val notMatching = sampleEntity(id = 2L, source = "영문 sample")
-            every { dao.getRecent(500) } returns flowOf(listOf(notMatching, matching))
+            every { dao.getRecent(250) } returns flowOf(listOf(notMatching, matching))
 
             val result = repository.searchHistory("ㅎㄱ").first()
 
             assertEquals(listOf(matching), result)
-            verify(exactly = 1) { dao.getRecent(500) }
+            verify(exactly = 1) { dao.getRecent(250) }
         }
 
     @Test

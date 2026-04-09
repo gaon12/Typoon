@@ -1,12 +1,21 @@
 package xyz.gaon.typoon.core.data.datastore
 
 import android.content.Context
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-
-private val Context.dataStore by preferencesDataStore(name = "settings")
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import java.io.File
 
 private fun parseThemeMode(rawValue: String?): ThemeMode =
     ThemeMode.entries.firstOrNull {
@@ -48,14 +57,24 @@ data class AppSettings(
 )
 
 class AppPreferences(
-    private val context: Context,
+    context: Context,
 ) {
-    private object PreferencesKeys {
+    private val appContext = context.applicationContext
+    private val dataStoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val generalDataStore: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { preferenceFile("settings.preferences_pb") },
+        )
+    private val localOnlyDataStore: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { File(appContext.noBackupFilesDir, "local_settings.preferences_pb") },
+        )
+
+    private object GeneralPreferencesKeys {
         val SAVE_HISTORY = booleanPreferencesKey("save_history")
         val MAX_HISTORY_COUNT = intPreferencesKey("max_history_count")
-        val AUTO_READ_CLIPBOARD = booleanPreferencesKey("auto_read_clipboard")
-        val AUTO_CONVERT_CLIPBOARD = booleanPreferencesKey("auto_convert_clipboard")
-        val CLIPBOARD_SUGGESTION_ENABLED = booleanPreferencesKey("clipboard_suggestion_enabled")
         val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
         val SHOW_HELP_BANNER = booleanPreferencesKey("show_help_banner")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -67,66 +86,69 @@ class AppPreferences(
         val AD_BLOCK_NOTICE_DISMISSED = booleanPreferencesKey("ad_block_notice_dismissed")
     }
 
+    private object LocalOnlyPreferencesKeys {
+        val AUTO_READ_CLIPBOARD = booleanPreferencesKey("auto_read_clipboard")
+        val AUTO_CONVERT_CLIPBOARD = booleanPreferencesKey("auto_convert_clipboard")
+        val CLIPBOARD_SUGGESTION_ENABLED = booleanPreferencesKey("clipboard_suggestion_enabled")
+    }
+
     val settings: Flow<AppSettings> =
-        context.dataStore.data.map { preferences ->
-            AppSettings(
-                saveHistory = preferences[PreferencesKeys.SAVE_HISTORY] ?: true,
-                maxHistoryCount = preferences[PreferencesKeys.MAX_HISTORY_COUNT] ?: 50,
-                autoReadClipboardOnLaunch = preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] ?: false,
-                autoConvertAfterClipboardRead = preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] ?: false,
-                clipboardSuggestionEnabled = preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] ?: true,
-                hapticEnabled = preferences[PreferencesKeys.HAPTIC_ENABLED] ?: true,
-                showHelpBanner = preferences[PreferencesKeys.SHOW_HELP_BANNER] ?: true,
-                onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false,
-                confidenceWarningThreshold = preferences[PreferencesKeys.CONFIDENCE_WARNING_THRESHOLD] ?: 0.6f,
-                themeMode = parseThemeMode(preferences[PreferencesKeys.THEME_MODE]),
-                appLanguage = parseAppLanguage(preferences[PreferencesKeys.APP_LANGUAGE]),
-                appendShareCredit = preferences[PreferencesKeys.APPEND_SHARE_CREDIT] ?: false,
-                reviewRequested = preferences[PreferencesKeys.REVIEW_REQUESTED] ?: false,
-                adBlockNoticeDismissed = preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] ?: false,
+        combine(generalDataStore.data, localOnlyDataStore.data) { generalPreferences, localPreferences ->
+            toAppSettings(
+                generalPreferences = generalPreferences,
+                localPreferences = localPreferences,
             )
         }
 
     suspend fun reset() {
-        context.dataStore.edit { it.clear() }
+        generalDataStore.edit { it.clear() }
+        localOnlyDataStore.edit { it.clear() }
     }
 
     suspend fun update(transform: (AppSettings) -> AppSettings) {
-        context.dataStore.edit { preferences ->
-            val themeStr = preferences[PreferencesKeys.THEME_MODE] ?: ThemeMode.SYSTEM.name
-            val languageStr = preferences[PreferencesKeys.APP_LANGUAGE] ?: AppLanguage.SYSTEM.name
-            val currentSettings =
-                AppSettings(
-                    saveHistory = preferences[PreferencesKeys.SAVE_HISTORY] ?: true,
-                    maxHistoryCount = preferences[PreferencesKeys.MAX_HISTORY_COUNT] ?: 50,
-                    autoReadClipboardOnLaunch = preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] ?: false,
-                    autoConvertAfterClipboardRead = preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] ?: false,
-                    clipboardSuggestionEnabled = preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] ?: true,
-                    hapticEnabled = preferences[PreferencesKeys.HAPTIC_ENABLED] ?: true,
-                    showHelpBanner = preferences[PreferencesKeys.SHOW_HELP_BANNER] ?: true,
-                    onboardingCompleted = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false,
-                    confidenceWarningThreshold = preferences[PreferencesKeys.CONFIDENCE_WARNING_THRESHOLD] ?: 0.6f,
-                    themeMode = parseThemeMode(themeStr),
-                    appLanguage = parseAppLanguage(languageStr),
-                    appendShareCredit = preferences[PreferencesKeys.APPEND_SHARE_CREDIT] ?: false,
-                    reviewRequested = preferences[PreferencesKeys.REVIEW_REQUESTED] ?: false,
-                    adBlockNoticeDismissed = preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] ?: false,
-                )
-            val newSettings = transform(currentSettings)
-            preferences[PreferencesKeys.SAVE_HISTORY] = newSettings.saveHistory
-            preferences[PreferencesKeys.MAX_HISTORY_COUNT] = newSettings.maxHistoryCount
-            preferences[PreferencesKeys.AUTO_READ_CLIPBOARD] = newSettings.autoReadClipboardOnLaunch
-            preferences[PreferencesKeys.AUTO_CONVERT_CLIPBOARD] = newSettings.autoConvertAfterClipboardRead
-            preferences[PreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] = newSettings.clipboardSuggestionEnabled
-            preferences[PreferencesKeys.HAPTIC_ENABLED] = newSettings.hapticEnabled
-            preferences[PreferencesKeys.SHOW_HELP_BANNER] = newSettings.showHelpBanner
-            preferences[PreferencesKeys.ONBOARDING_COMPLETED] = newSettings.onboardingCompleted
-            preferences[PreferencesKeys.CONFIDENCE_WARNING_THRESHOLD] = newSettings.confidenceWarningThreshold
-            preferences[PreferencesKeys.THEME_MODE] = newSettings.themeMode.name
-            preferences[PreferencesKeys.APP_LANGUAGE] = newSettings.appLanguage.name
-            preferences[PreferencesKeys.APPEND_SHARE_CREDIT] = newSettings.appendShareCredit
-            preferences[PreferencesKeys.REVIEW_REQUESTED] = newSettings.reviewRequested
-            preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] = newSettings.adBlockNoticeDismissed
+        val newSettings = transform(settings.first())
+        generalDataStore.edit { preferences ->
+            preferences[GeneralPreferencesKeys.SAVE_HISTORY] = newSettings.saveHistory
+            preferences[GeneralPreferencesKeys.MAX_HISTORY_COUNT] = newSettings.maxHistoryCount
+            preferences[GeneralPreferencesKeys.HAPTIC_ENABLED] = newSettings.hapticEnabled
+            preferences[GeneralPreferencesKeys.SHOW_HELP_BANNER] = newSettings.showHelpBanner
+            preferences[GeneralPreferencesKeys.ONBOARDING_COMPLETED] = newSettings.onboardingCompleted
+            preferences[GeneralPreferencesKeys.CONFIDENCE_WARNING_THRESHOLD] = newSettings.confidenceWarningThreshold
+            preferences[GeneralPreferencesKeys.THEME_MODE] = newSettings.themeMode.name
+            preferences[GeneralPreferencesKeys.APP_LANGUAGE] = newSettings.appLanguage.name
+            preferences[GeneralPreferencesKeys.APPEND_SHARE_CREDIT] = newSettings.appendShareCredit
+            preferences[GeneralPreferencesKeys.REVIEW_REQUESTED] = newSettings.reviewRequested
+            preferences[GeneralPreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] = newSettings.adBlockNoticeDismissed
+        }
+        localOnlyDataStore.edit { preferences ->
+            preferences[LocalOnlyPreferencesKeys.AUTO_READ_CLIPBOARD] = newSettings.autoReadClipboardOnLaunch
+            preferences[LocalOnlyPreferencesKeys.AUTO_CONVERT_CLIPBOARD] = newSettings.autoConvertAfterClipboardRead
+            preferences[LocalOnlyPreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] = newSettings.clipboardSuggestionEnabled
         }
     }
+
+    private fun preferenceFile(fileName: String): File = File(appContext.filesDir, "datastore/$fileName")
+
+    private fun toAppSettings(
+        generalPreferences: Preferences,
+        localPreferences: Preferences,
+    ): AppSettings =
+        AppSettings(
+            saveHistory = generalPreferences[GeneralPreferencesKeys.SAVE_HISTORY] ?: true,
+            maxHistoryCount = generalPreferences[GeneralPreferencesKeys.MAX_HISTORY_COUNT] ?: 50,
+            autoReadClipboardOnLaunch = localPreferences[LocalOnlyPreferencesKeys.AUTO_READ_CLIPBOARD] ?: false,
+            autoConvertAfterClipboardRead = localPreferences[LocalOnlyPreferencesKeys.AUTO_CONVERT_CLIPBOARD] ?: false,
+            clipboardSuggestionEnabled =
+                localPreferences[LocalOnlyPreferencesKeys.CLIPBOARD_SUGGESTION_ENABLED] ?: true,
+            hapticEnabled = generalPreferences[GeneralPreferencesKeys.HAPTIC_ENABLED] ?: true,
+            showHelpBanner = generalPreferences[GeneralPreferencesKeys.SHOW_HELP_BANNER] ?: true,
+            onboardingCompleted = generalPreferences[GeneralPreferencesKeys.ONBOARDING_COMPLETED] ?: false,
+            confidenceWarningThreshold =
+                generalPreferences[GeneralPreferencesKeys.CONFIDENCE_WARNING_THRESHOLD] ?: 0.6f,
+            themeMode = parseThemeMode(generalPreferences[GeneralPreferencesKeys.THEME_MODE]),
+            appLanguage = parseAppLanguage(generalPreferences[GeneralPreferencesKeys.APP_LANGUAGE]),
+            appendShareCredit = generalPreferences[GeneralPreferencesKeys.APPEND_SHARE_CREDIT] ?: false,
+            reviewRequested = generalPreferences[GeneralPreferencesKeys.REVIEW_REQUESTED] ?: false,
+            adBlockNoticeDismissed = generalPreferences[GeneralPreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] ?: false,
+        )
 }

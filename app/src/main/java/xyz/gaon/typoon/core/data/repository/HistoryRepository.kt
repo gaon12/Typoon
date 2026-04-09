@@ -2,9 +2,11 @@
 
 package xyz.gaon.typoon.core.data.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import xyz.gaon.typoon.core.data.datastore.AppPreferences
 import xyz.gaon.typoon.core.data.db.ConversionDao
@@ -44,37 +46,20 @@ class HistoryRepositoryImpl(
     private val dao: ConversionDao,
     private val preferences: AppPreferences,
 ) : HistoryRepository {
+    private companion object {
+        const val BLANK_QUERY_LIMIT = 50
+        const val CHOSEONG_SCAN_LIMIT = 250
+        const val SEARCH_RESULT_LIMIT = 50
+    }
+
     override fun getRecentHistory(limit: Int): Flow<List<ConversionEntity>> = dao.getRecent(limit)
 
     override fun searchHistory(query: String): Flow<List<ConversionEntity>> {
         val normalized = HistorySearchPolicy.normalizeUserQuery(query)
-        if (normalized.isBlank()) return dao.getRecent(50)
-
-        if (HistorySearchPolicy.isChoseongOnlyQuery(normalized)) {
-            return dao
-                .getRecent(500)
-                .map { entities ->
-                    entities
-                        .filter { entity ->
-                            HistorySearchPolicy.matchesChoseong(
-                                query = normalized,
-                                sourceText = entity.sourceText,
-                                resultText = entity.resultText,
-                            )
-                        }.take(50)
-                }
-        }
-
-        val escapedLikeQuery = HistorySearchPolicy.escapeLikeQuery(normalized)
-        val likeFlow = dao.searchLike(escapedLikeQuery)
-        val ftsQuery = HistorySearchPolicy.buildSafeFtsPrefixQuery(normalized)
-        if (ftsQuery == null) return likeFlow
-
-        return combine(dao.searchFts(ftsQuery), likeFlow) { ftsMatches, likeMatches ->
-            (ftsMatches + likeMatches)
-                .distinctBy(ConversionEntity::id)
-                .sortedByDescending { it.createdAt }
-                .take(50)
+        return when {
+            normalized.isBlank() -> dao.getRecent(BLANK_QUERY_LIMIT)
+            HistorySearchPolicy.isChoseongOnlyQuery(normalized) -> searchChoseongHistory(normalized)
+            else -> searchKeywordHistory(normalized)
         }
     }
 
@@ -109,5 +94,37 @@ class HistoryRepositoryImpl(
 
     override suspend fun deleteAll() {
         dao.deleteAll()
+    }
+
+    private fun searchChoseongHistory(normalized: String): Flow<List<ConversionEntity>> =
+        dao
+            .getRecent(CHOSEONG_SCAN_LIMIT)
+            .map { entities ->
+                entities
+                    .asSequence()
+                    .filter { entity ->
+                        HistorySearchPolicy.matchesChoseong(
+                            query = normalized,
+                            sourceText = entity.sourceText,
+                            resultText = entity.resultText,
+                        )
+                    }.take(SEARCH_RESULT_LIMIT)
+                    .toList()
+            }.flowOn(Dispatchers.Default)
+
+    private fun searchKeywordHistory(normalized: String): Flow<List<ConversionEntity>> {
+        val escapedLikeQuery = HistorySearchPolicy.escapeLikeQuery(normalized)
+        val likeFlow = dao.searchLike(escapedLikeQuery)
+        val ftsQuery = HistorySearchPolicy.buildSafeFtsPrefixQuery(normalized)
+        return if (ftsQuery == null) {
+            likeFlow
+        } else {
+            combine(dao.searchFts(ftsQuery), likeFlow) { ftsMatches, likeMatches ->
+                (ftsMatches + likeMatches)
+                    .distinctBy(ConversionEntity::id)
+                    .sortedByDescending { it.createdAt }
+                    .take(SEARCH_RESULT_LIMIT)
+            }.flowOn(Dispatchers.Default)
+        }
     }
 }
