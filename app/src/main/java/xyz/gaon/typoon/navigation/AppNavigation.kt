@@ -9,12 +9,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.History
@@ -25,16 +29,20 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
@@ -42,6 +50,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import xyz.gaon.typoon.R
+import xyz.gaon.typoon.core.data.datastore.AppSettings
 import xyz.gaon.typoon.feature.dictionary.DictionaryScreen
 import xyz.gaon.typoon.feature.history.HistoryScreen
 import xyz.gaon.typoon.feature.home.HomeScreen
@@ -67,7 +76,11 @@ import xyz.gaon.typoon.feature.splash.SplashRoute
 import xyz.gaon.typoon.ui.components.AdBannerView
 
 @Composable
-fun AppNavigation(shortcutClipboardToken: Int = 0) {
+fun AppNavigation(
+    shortcutClipboardToken: Int = 0,
+    settings: AppSettings,
+    onAdBlockNoticeDismissed: (Boolean) -> Unit,
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -75,6 +88,9 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
     val activity = context as? Activity
     val exitToastMessage = stringResource(R.string.nav_exit_toast)
     var lastBackPressedAt by remember { mutableLongStateOf(0L) }
+    var showAdBlockNoticeDialog by rememberSaveable { mutableStateOf(false) }
+    var dontShowAdBlockNoticeAgain by rememberSaveable { mutableStateOf(false) }
+    var hasShownAdBlockNoticeThisSession by remember { mutableStateOf(false) }
 
     val bottomNavItems =
         listOf(
@@ -119,12 +135,21 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
         }
     }
 
+    fun handleProbableAdBlockDetected() {
+        if (settings.adBlockNoticeDismissed || hasShownAdBlockNoticeThisSession || !showBottomBar) return
+        hasShownAdBlockNoticeThisSession = true
+        dontShowAdBlockNoticeAgain = false
+        showAdBlockNoticeDialog = true
+    }
+
     Scaffold(
         contentWindowInsets = rootContentInsets,
         bottomBar = {
             if (showBottomBar) {
                 Column {
-                    AdBannerView()
+                    AdBannerView(
+                        onProbableAdBlockDetected = ::handleProbableAdBlockDetected,
+                    )
                     NavigationBar {
                         bottomNavItems.forEach { item ->
                             val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
@@ -442,6 +467,17 @@ fun AppNavigation(shortcutClipboardToken: Int = 0) {
             }
         }
     }
+
+    if (showAdBlockNoticeDialog) {
+        AdBlockNoticeDialog(
+            dontShowAgain = dontShowAdBlockNoticeAgain,
+            onDontShowAgainChange = { dontShowAdBlockNoticeAgain = it },
+            onDismiss = {
+                showAdBlockNoticeDialog = false
+                onAdBlockNoticeDismissed(dontShowAdBlockNoticeAgain)
+            },
+        )
+    }
 }
 
 private sealed class BottomNavItem(
@@ -456,4 +492,43 @@ private sealed class BottomNavItem(
     data object Dictionary : BottomNavItem(AppRoute.Dictionary.route, R.string.nav_dictionary, Icons.Default.Book)
 
     data object Settings : BottomNavItem(AppRoute.Settings.route, R.string.nav_settings, Icons.Default.Settings)
+}
+
+@Composable
+private fun AdBlockNoticeDialog(
+    dontShowAgain: Boolean,
+    onDontShowAgainChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = stringResource(R.string.ad_block_notice_title))
+        },
+        text = {
+            Column {
+                Text(text = stringResource(R.string.ad_block_notice_body))
+                Row(
+                    modifier =
+                        Modifier
+                            .padding(top = 16.dp)
+                            .clickable { onDontShowAgainChange(!dontShowAgain) },
+                ) {
+                    Checkbox(
+                        checked = dontShowAgain,
+                        onCheckedChange = onDontShowAgainChange,
+                    )
+                    Text(
+                        text = stringResource(R.string.ad_block_notice_dont_show_again),
+                        modifier = Modifier.padding(top = 12.dp, start = 8.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.ad_block_notice_confirm))
+            }
+        },
+    )
 }

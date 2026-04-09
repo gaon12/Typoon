@@ -46,6 +46,10 @@
     <string name="common_share">Share</string>
     <string name="common_reverse">Reverse</string>
     <string name="common_undo">Undo</string>
+    <string name="ad_block_notice_title">Allow ads to support Typoon</string>
+    <string name="ad_block_notice_body">If you use an ad blocker or DNS filter, banner ads may not load. If you want to support Typoon, please consider allowing ads in the app.</string>
+    <string name="ad_block_notice_dont_show_again">Don\'t show again</string>
+    <string name="ad_block_notice_confirm">OK</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_history">History</string>

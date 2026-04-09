@@ -4,11 +4,18 @@ import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,7 +27,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.core.net.toUri
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
 import xyz.gaon.typoon.R
+import xyz.gaon.typoon.BuildConfig
 
 private const val BANNER_LINK = "https://github.com/sponsors/gaon12"
 
@@ -38,10 +51,16 @@ private const val BANNER_LINK = "https://github.com/sponsors/gaon12"
  *   drawable-ko-night-nodpi/ad_banner_fallback.png  — 한국어, 다크
  */
 @Composable
-fun AdBannerView(modifier: Modifier = Modifier) {
+fun AdBannerView(
+    modifier: Modifier = Modifier,
+    onProbableAdBlockDetected: () -> Unit = {},
+) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val currentOnProbableAdBlockDetected by rememberUpdatedState(onProbableAdBlockDetected)
+    var isAdLoaded by remember(configuration.orientation, configuration.screenWidthDp) { mutableStateOf(false) }
+    var hasReportedProbableAdBlock by remember(configuration.orientation, configuration.screenWidthDp) { mutableStateOf(false) }
     val bannerBitmap =
         remember(isDarkTheme, configuration.locales.toLanguageTags()) {
             val overrideConfig =
@@ -56,12 +75,64 @@ fun AdBannerView(modifier: Modifier = Modifier) {
                     ?: BitmapFactory.decodeResource(context.resources, R.drawable.ad_banner_fallback)
             trimTransparentEdges(rawBitmap)
         }
+    val adWidthDp = configuration.screenWidthDp.coerceAtLeast(1)
+    val adView =
+        remember(context, adWidthDp) {
+            AdView(context).apply {
+                adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
+                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidthDp))
+                adListener =
+                    object : AdListener() {
+                        override fun onAdLoaded() {
+                            isAdLoaded = true
+                        }
 
+                        override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                            isAdLoaded = false
+                            if (
+                                loadAdError.code == AdRequest.ERROR_CODE_NETWORK_ERROR &&
+                                !hasReportedProbableAdBlock
+                            ) {
+                                hasReportedProbableAdBlock = true
+                                currentOnProbableAdBlockDetected()
+                            }
+                        }
+                    }
+                loadAd(AdRequest.Builder().build())
+            }
+        }
+
+    DisposableEffect(adView) {
+        onDispose {
+            adView.destroy()
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        if (isAdLoaded) {
+            AndroidView(
+                factory = { adView },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            FallbackBannerImage(
+                context = context,
+                bannerBitmap = bannerBitmap,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FallbackBannerImage(
+    context: android.content.Context,
+    bannerBitmap: Bitmap,
+) {
     Image(
         bitmap = bannerBitmap.asImageBitmap(),
         contentDescription = null,
         modifier =
-            modifier
+            Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button) {
                     context.startActivity(

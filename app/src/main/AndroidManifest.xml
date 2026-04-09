@@ -14,10 +14,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Typoon">
-        <!-- TODO: 출시 전 실제 AdMob 앱 ID로 교체 (현재는 테스트 ID) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-9562207362177049~7390519018" />
 
         <activity
             android:name=".MainActivity"

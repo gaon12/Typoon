@@ -60,7 +60,11 @@ class MainActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    AppNavigation(shortcutClipboardToken = shortcutClipboardToken)
+                    AppNavigation(
+                        shortcutClipboardToken = shortcutClipboardToken,
+                        settings = settings,
+                        onAdBlockNoticeDismissed = viewModel::onAdBlockNoticeDismissed,
+                    )
                 }
             }
         }

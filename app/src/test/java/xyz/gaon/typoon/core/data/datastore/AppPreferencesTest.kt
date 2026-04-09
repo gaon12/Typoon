@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,6 +36,7 @@ class AppPreferencesTest {
                     hapticEnabled = false,
                     themeMode = ThemeMode.DARK,
                     appLanguage = AppLanguage.KOREAN,
+                    adBlockNoticeDismissed = true,
                 )
             }
 
@@ -46,6 +49,7 @@ class AppPreferencesTest {
             assertEquals(false, settings.hapticEnabled)
             assertEquals(ThemeMode.DARK, settings.themeMode)
             assertEquals(AppLanguage.KOREAN, settings.appLanguage)
+            assertTrue(settings.adBlockNoticeDismissed)
         }
 
     @Test
@@ -59,5 +63,6 @@ class AppPreferencesTest {
             assertEquals(50, settings.maxHistoryCount)
             assertEquals(true, settings.clipboardSuggestionEnabled)
             assertEquals(ThemeMode.SYSTEM, settings.themeMode)
+            assertFalse(settings.adBlockNoticeDismissed)
         }
 }

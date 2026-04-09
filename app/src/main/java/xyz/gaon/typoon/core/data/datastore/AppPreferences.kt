@@ -44,6 +44,7 @@ data class AppSettings(
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appendShareCredit: Boolean = false,
     val reviewRequested: Boolean = false,
+    val adBlockNoticeDismissed: Boolean = false,
 )
 
 class AppPreferences(
@@ -63,6 +64,7 @@ class AppPreferences(
         val APP_LANGUAGE = stringPreferencesKey("app_language")
         val APPEND_SHARE_CREDIT = booleanPreferencesKey("append_share_credit")
         val REVIEW_REQUESTED = booleanPreferencesKey("review_requested")
+        val AD_BLOCK_NOTICE_DISMISSED = booleanPreferencesKey("ad_block_notice_dismissed")
     }
 
     val settings: Flow<AppSettings> =
@@ -81,6 +83,7 @@ class AppPreferences(
                 appLanguage = parseAppLanguage(preferences[PreferencesKeys.APP_LANGUAGE]),
                 appendShareCredit = preferences[PreferencesKeys.APPEND_SHARE_CREDIT] ?: false,
                 reviewRequested = preferences[PreferencesKeys.REVIEW_REQUESTED] ?: false,
+                adBlockNoticeDismissed = preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] ?: false,
             )
         }
 
@@ -107,6 +110,7 @@ class AppPreferences(
                     appLanguage = parseAppLanguage(languageStr),
                     appendShareCredit = preferences[PreferencesKeys.APPEND_SHARE_CREDIT] ?: false,
                     reviewRequested = preferences[PreferencesKeys.REVIEW_REQUESTED] ?: false,
+                    adBlockNoticeDismissed = preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] ?: false,
                 )
             val newSettings = transform(currentSettings)
             preferences[PreferencesKeys.SAVE_HISTORY] = newSettings.saveHistory
@@ -122,6 +126,7 @@ class AppPreferences(
             preferences[PreferencesKeys.APP_LANGUAGE] = newSettings.appLanguage.name
             preferences[PreferencesKeys.APPEND_SHARE_CREDIT] = newSettings.appendShareCredit
             preferences[PreferencesKeys.REVIEW_REQUESTED] = newSettings.reviewRequested
+            preferences[PreferencesKeys.AD_BLOCK_NOTICE_DISMISSED] = newSettings.adBlockNoticeDismissed
         }
     }
 }

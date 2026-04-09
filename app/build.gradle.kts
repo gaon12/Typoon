@@ -34,14 +34,26 @@ android {
         applicationId = "xyz.gaon.typoon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.1"
+        versionCode = 4
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            buildConfigField(
+                "String",
+                "ADMOB_BANNER_AD_UNIT_ID",
+                "\"ca-app-pub-3940256099942544/9214589741\"",
+            )
+        }
         release {
+            buildConfigField(
+                "String",
+                "ADMOB_BANNER_AD_UNIT_ID",
+                "\"ca-app-pub-9562207362177049/6066298243\"",
+            )
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
