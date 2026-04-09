@@ -83,8 +83,6 @@ Typoon은 한글/영문 키보드 전환이 잘못된 문장을 기기 안에서
 
 ## Screenshots
 
-> 아래 이미지는 예시 경로입니다. 실제 스크린샷 파일을 추가한 뒤 경로만 교체하면 됩니다.
-
 | Home | Result | Quick View |
 | --- | --- | --- |
 | ![Home](./docs/images/home.png) | ![Result](./docs/images/result.png) | ![Quick_View](./docs/images/quick_view.png) |
@@ -95,7 +93,7 @@ Typoon은 한글/영문 키보드 전환이 잘못된 문장을 기기 안에서
 
 ### Play Store
 
-<a src="https://play.google.com/store/apps/details?id=xyz.gaon.typoon"><img src="https://camo.githubusercontent.com/1ad07f3d2cb2159e98a3936397acc3e39a730fab60aabca79588d4d799afca77/68747470733a2f2f63646e2e7261776769742e636f6d2f73746576657269636865792f676f6f676c652d706c61792d62616467652d7376672f6d61737465722f696d672f66725f6765742e737667" style="width: 50px;" /></a>
+<a src="https://play.google.com/store/apps/details?id=xyz.gaon.typoon"><img src="https://camo.githubusercontent.com/1ad07f3d2cb2159e98a3936397acc3e39a730fab60aabca79588d4d799afca77/68747470733a2f2f63646e2e7261776769742e636f6d2f73746576657269636865792f676f6f676c652d706c61792d62616467652d7376672f6d61737465722f696d672f66725f6765742e737667" style="width: 200px;" /></a>
 
 ### APK
 
