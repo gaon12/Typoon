@@ -1,9 +1,14 @@
 package xyz.gaon.typoon.ui.components
 
 import android.content.Intent
+import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -32,10 +38,14 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
+import kotlinx.coroutines.delay
 import xyz.gaon.typoon.BuildConfig
 import xyz.gaon.typoon.R
 
 private const val BANNER_LINK = "https://github.com/sponsors/gaon12"
+private const val TAG = "AdBannerView"
+private const val MAX_AD_LOAD_ATTEMPTS = 3
+private val AD_RETRY_DELAYS_MS = listOf(1_500L, 4_000L)
 
 /**
  * 광고 배너 영역.
@@ -58,7 +68,9 @@ fun AdBannerView(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val networkState by rememberNetworkValidationState(context)
     val currentOnProbableAdBlockDetected by rememberUpdatedState(onProbableAdBlockDetected)
+    val currentNetworkState by rememberUpdatedState(networkState)
     var isAdLoaded by
         remember(configuration.orientation, configuration.screenWidthDp) {
             mutableStateOf(false)
@@ -66,6 +78,14 @@ fun AdBannerView(
     var hasReportedProbableAdBlock by
         remember(configuration.orientation, configuration.screenWidthDp) {
             mutableStateOf(false)
+        }
+    var consecutiveRelevantFailures by
+        remember(configuration.orientation, configuration.screenWidthDp) {
+            mutableIntStateOf(0)
+        }
+    var loadAttempt by
+        remember(configuration.orientation, configuration.screenWidthDp) {
+            mutableIntStateOf(0)
         }
     val bannerBitmap =
         remember(isDarkTheme, configuration.locales.toLanguageTags()) {
@@ -91,22 +111,60 @@ fun AdBannerView(
                     object : AdListener() {
                         override fun onAdLoaded() {
                             isAdLoaded = true
+                            consecutiveRelevantFailures = 0
                         }
 
                         override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                             isAdLoaded = false
+                            val failureDiagnostics =
+                                buildFailureDiagnostics(
+                                    code = loadAdError.code,
+                                    domain = loadAdError.domain,
+                                    message = loadAdError.message,
+                                    causeMessages = generateSequence(loadAdError.cause) { it.cause }.mapNotNull { it.message },
+                                )
+                            Log.w(
+                                TAG,
+                                "Banner ad failed: attempt=${loadAttempt + 1}/$MAX_AD_LOAD_ATTEMPTS, code=${loadAdError.code}, domain=${loadAdError.domain}, message=${loadAdError.message}, responseId=${loadAdError.responseInfo?.responseId}, networkValidated=${currentNetworkState.isValidated}, vpn=${currentNetworkState.isVpn}, diagnostics=$failureDiagnostics",
+                            )
+
+                            val nextFailureCount =
+                                if (shouldCountAsRelevantAdFailure(loadAdError.code)) {
+                                    consecutiveRelevantFailures + 1
+                                } else {
+                                    0
+                                }
+                            consecutiveRelevantFailures = nextFailureCount
+
                             if (
-                                loadAdError.code == AdRequest.ERROR_CODE_NETWORK_ERROR &&
-                                !hasReportedProbableAdBlock
+                                !hasReportedProbableAdBlock &&
+                                shouldShowProbableAdBlockNotice(
+                                    failureCount = nextFailureCount,
+                                    loadAdError = loadAdError,
+                                    isNetworkValidated = currentNetworkState.isValidated,
+                                )
                             ) {
                                 hasReportedProbableAdBlock = true
                                 currentOnProbableAdBlockDetected()
                             }
+
+                            if (loadAttempt < MAX_AD_LOAD_ATTEMPTS - 1) {
+                                loadAttempt += 1
+                            }
                         }
                     }
-                loadAd(AdRequest.Builder().build())
             }
         }
+
+    androidx.compose.runtime.LaunchedEffect(adView, loadAttempt) {
+        if (isAdLoaded) return@LaunchedEffect
+
+        val retryDelayMs = AD_RETRY_DELAYS_MS.getOrElse(loadAttempt - 1) { 0L }
+        if (retryDelayMs > 0) {
+            delay(retryDelayMs)
+        }
+        adView.loadAd(AdRequest.Builder().build())
+    }
 
     DisposableEffect(adView) {
         onDispose {
@@ -127,6 +185,200 @@ fun AdBannerView(
             )
         }
     }
+}
+
+internal fun isProbableAdBlock(loadAdError: LoadAdError): Boolean {
+    return isProbableAdBlock(
+        code = loadAdError.code,
+        domain = loadAdError.domain,
+        message = loadAdError.message,
+        causeMessages = generateSequence(loadAdError.cause) { it.cause }.mapNotNull { it.message },
+    )
+}
+
+internal fun isProbableAdBlock(
+    code: Int,
+    domain: String?,
+    message: String?,
+    causeMessages: Sequence<String> = emptySequence(),
+): Boolean {
+    val diagnostics = buildFailureDiagnostics(code, domain, message, causeMessages)
+
+    val hasAdHostMarker =
+        AD_HOST_MARKERS.any { marker ->
+            diagnostics.contains(marker)
+        }
+    val hasBlockingMarker =
+        BLOCKING_MARKERS.any { marker ->
+            diagnostics.contains(marker)
+        }
+    val hasDnsFailureMarker =
+        DNS_FAILURE_MARKERS.any { marker ->
+            diagnostics.contains(marker)
+        }
+    val hasConnectionFailureMarker =
+        CONNECTION_FAILURE_MARKERS.any { marker ->
+            diagnostics.contains(marker)
+        }
+
+    return hasAdHostMarker &&
+        (
+            hasBlockingMarker ||
+                hasDnsFailureMarker ||
+                (code == AdRequest.ERROR_CODE_NETWORK_ERROR && hasConnectionFailureMarker)
+        )
+}
+
+internal fun shouldCountAsRelevantAdFailure(code: Int): Boolean =
+    code != AdRequest.ERROR_CODE_NO_FILL && code != AdRequest.ERROR_CODE_MEDIATION_NO_FILL
+
+internal fun shouldShowProbableAdBlockNotice(
+    failureCount: Int,
+    loadAdError: LoadAdError,
+    isNetworkValidated: Boolean,
+): Boolean =
+    shouldShowProbableAdBlockNotice(
+        failureCount = failureCount,
+        isNetworkValidated = isNetworkValidated,
+        code = loadAdError.code,
+        domain = loadAdError.domain,
+        message = loadAdError.message,
+        causeMessages = generateSequence(loadAdError.cause) { it.cause }.mapNotNull { it.message },
+    )
+
+internal fun shouldShowProbableAdBlockNotice(
+    failureCount: Int,
+    isNetworkValidated: Boolean,
+    code: Int,
+    domain: String?,
+    message: String?,
+    causeMessages: Sequence<String> = emptySequence(),
+): Boolean {
+    if (!isNetworkValidated) return false
+    if (!shouldCountAsRelevantAdFailure(code)) return false
+    if (failureCount < 2) return false
+
+    if (
+        isProbableAdBlock(
+            code = code,
+            domain = domain,
+            message = message,
+            causeMessages = causeMessages,
+        ) || code == AdRequest.ERROR_CODE_NETWORK_ERROR
+    ) {
+        return true
+    }
+
+    return failureCount >= MAX_AD_LOAD_ATTEMPTS
+}
+
+private fun buildFailureDiagnostics(
+    code: Int,
+    domain: String?,
+    message: String?,
+    causeMessages: Sequence<String>,
+): String =
+    buildList {
+        add("code=$code")
+        if (domain != null) add(domain)
+        if (message != null) add(message)
+        addAll(causeMessages)
+    }.joinToString(separator = " | ").lowercase()
+
+private val AD_HOST_MARKERS =
+    listOf(
+        "googleads",
+        "doubleclick",
+        "admob",
+        "adsense",
+        "pagead",
+        "adservice",
+    )
+
+private val BLOCKING_MARKERS =
+    listOf(
+        "ad blocker",
+        "adblock",
+        "blocked",
+        "dns filter",
+        "private dns",
+        "content filter",
+    )
+
+private val DNS_FAILURE_MARKERS =
+    listOf(
+        "unable to resolve host",
+        "name_not_resolved",
+        "host lookup",
+        "no address associated with hostname",
+        "nxdomain",
+    )
+
+private val CONNECTION_FAILURE_MARKERS =
+    listOf(
+        "connection refused",
+        "connection reset",
+        "timed out",
+        "timeout",
+        "network is unreachable",
+        "net::err",
+    )
+
+private data class NetworkValidationState(
+    val isValidated: Boolean = false,
+    val isVpn: Boolean = false,
+)
+
+@Composable
+private fun rememberNetworkValidationState(context: Context): androidx.compose.runtime.State<NetworkValidationState> {
+    val appContext = context.applicationContext
+    val connectivityManager =
+        remember(appContext) {
+            appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        }
+    val state =
+        remember {
+            mutableStateOf(connectivityManager.currentNetworkValidationState())
+        }
+
+    DisposableEffect(connectivityManager) {
+        val callback =
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    state.value = connectivityManager.currentNetworkValidationState()
+                }
+
+                override fun onCapabilitiesChanged(
+                    network: Network,
+                    networkCapabilities: NetworkCapabilities,
+                ) {
+                    state.value =
+                        NetworkValidationState(
+                            isValidated = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+                            isVpn = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
+                        )
+                }
+
+                override fun onLost(network: Network) {
+                    state.value = connectivityManager.currentNetworkValidationState()
+                }
+            }
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+
+    return state
+}
+
+private fun ConnectivityManager.currentNetworkValidationState(): NetworkValidationState {
+    val capabilities = getNetworkCapabilities(activeNetwork)
+    return NetworkValidationState(
+        isValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true,
+        isVpn = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true,
+    )
 }
 
 @Composable
