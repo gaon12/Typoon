@@ -106,7 +106,7 @@ fun AdBannerView(
         remember(context, adWidthDp) {
             AdView(context).apply {
                 adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
-                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidthDp))
+                setAdSize(AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, adWidthDp))
                 adListener =
                     object : AdListener() {
                         override fun onAdLoaded() {
